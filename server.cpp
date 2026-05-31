@@ -25,7 +25,7 @@ class Server {
     int server_socket = -1;
     int server_port;
 
-    std::atomic<bool> is_running = false;
+    std::atomic<bool> is_running = false; // shared variable for workers
     std::vector<std::thread> workers;
 
     void handle_client(int client_socket) {
@@ -36,6 +36,7 @@ class Server {
             recv(client_socket, buffer, sizeof(buffer) - 1, 0);
 
         if (!is_running) {
+            // exit if we reached here from ::shutdown()
             return;
         }
 
@@ -49,6 +50,7 @@ class Server {
 
         memcpy(&cli_pload, buffer, sizeof(cli_pload));
 
+        // shutdown server if out of range
         if (cli_pload.number < 1 || cli_pload.number > 100) {
             shutdown();
             close(client_socket);
@@ -81,6 +83,7 @@ class Server {
     Server(int server_port) : server_port(server_port) {}
 
     int start() {
+        // create socket
         if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
             std::cerr << strerror(errno) << std::endl;
             return 1;
@@ -90,12 +93,14 @@ class Server {
                                 .sin_port = htons(server_port),
                                 .sin_addr = {.s_addr = INADDR_ANY}};
 
+        // bind address
         if (bind(server_socket, (sockaddr *)&ser_addr, sizeof(ser_addr)) ==
             -1) {
             std::cerr << strerror(errno) << std::endl;
             return 1;
         }
 
+        // prepare to accept connection
         if (listen(server_socket, 5) == -1) {
             std::cerr << strerror(errno) << std::endl;
             return 1;
@@ -108,6 +113,7 @@ class Server {
         is_running = true;
 
         while (is_running) {
+            // wait for client connections
             int client_socket = accept(server_socket, nullptr, nullptr);
             if (!is_running)
                 break;
@@ -122,6 +128,7 @@ class Server {
             workers.push_back(std::move(t));
         }
 
+        // ensure workers finish before exiting start()
         for (auto &t : workers) {
             if (t.joinable()) {
                 t.join();
