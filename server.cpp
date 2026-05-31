@@ -4,6 +4,7 @@
 #include <unistd.h>
 
 #include <atomic>
+#include <cstring>
 #include <format>
 #include <iostream>
 #include <thread>
