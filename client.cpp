@@ -73,8 +73,8 @@ int main() {
         return 1;
     }
 
-    payload cli_pload;
-    memcpy(cli_pload.name, client_name.c_str(), sizeof(payload::name));
+    payload cli_pload = {};
+    std::strcpy(cli_pload.name, client_name.c_str());
     cli_pload.number = client_number;
 
     if (send(cli_sck, &cli_pload, sizeof(cli_pload), 0) == -1) {
