@@ -100,4 +100,6 @@ int main() {
                              cli_pload.name,
                              ser_pload.number + cli_pload.number)
               << std::endl;
+
+    close(cli_sck);
 }
