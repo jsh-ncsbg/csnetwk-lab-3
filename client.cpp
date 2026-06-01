@@ -57,8 +57,8 @@ int main() {
     std::string client_name = get_client_name();
     int64_t client_number = get_client_number();
 
-    int cli_sck;
-    if ((cli_sck = socket(AF_INET, SOCK_STREAM, 6)) == -1) {
+    int client_socket;
+    if ((client_socket = socket(AF_INET, SOCK_STREAM, 6)) == -1) {
         std::cerr << strerror(errno) << std::endl;
         return 1;
     }
@@ -67,39 +67,40 @@ int main() {
 
     inet_pton(AF_INET, "127.0.0.1", &ser_addr.sin_addr);
 
-    if (connect(cli_sck, (sockaddr *)&ser_addr, sizeof(ser_addr)) == -1) {
+    if (connect(client_socket, (sockaddr *)&ser_addr, sizeof(ser_addr)) == -1) {
         std::cerr << strerror(errno) << std::endl;
-        close(cli_sck);
+        close(client_socket);
         return 1;
     }
 
-    payload cli_pload = {};
-    std::strcpy(cli_pload.name, client_name.c_str());
-    cli_pload.number = client_number;
+    payload client_payload = {};
+    std::strcpy(client_payload.name, client_name.c_str());
+    client_payload.number = client_number;
 
-    if (send(cli_sck, &cli_pload, sizeof(cli_pload), 0) == -1) {
+    if (send(client_socket, &client_payload, sizeof(client_payload), 0) == -1) {
         std::cerr << "Failed to send data to server: " << strerror(errno)
                   << std::endl;
-        close(cli_sck);
+        close(client_socket);
         return 1;
     }
 
-    payload ser_pload;
+    payload server_payload;
 
-    ssize_t bytes_received = recv(cli_sck, &ser_pload, sizeof(ser_pload), 0);
+    ssize_t bytes_received =
+        recv(client_socket, &server_payload, sizeof(server_payload), 0);
 
     if (bytes_received < 0) {
         std::cerr << "Failed to receive data from server: " << strerror(errno)
                   << std::endl;
-        close(cli_sck);
+        close(client_socket);
         return 1;
     }
 
     std::cout << std::format("{} (\"{}\" number) + {} (\"{}\" number) = {}",
-                             ser_pload.number, ser_pload.name, cli_pload.number,
-                             cli_pload.name,
-                             ser_pload.number + cli_pload.number)
+                             server_payload.number, server_payload.name,
+                             client_payload.number, client_payload.name,
+                             server_payload.number + client_payload.number)
               << std::endl;
 
-    close(cli_sck);
+    close(client_socket);
 }

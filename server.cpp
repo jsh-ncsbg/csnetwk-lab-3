@@ -34,7 +34,7 @@ class Server {
 
     void handle_client(int client_socket) {
         char buffer[128];
-        payload cli_pload;
+        payload client_payload;
 
         ssize_t bytes_received =
             recv(client_socket, buffer, sizeof(buffer) - 1, 0);
@@ -54,27 +54,27 @@ class Server {
             return;
         }
 
-        memcpy(&cli_pload, buffer, sizeof(cli_pload));
+        memcpy(&client_payload, buffer, sizeof(client_payload));
 
         std::cout << std::format("\"{}\" connected to client \"{}\"",
-                                 SERVER_NAME, cli_pload.name)
+                                 SERVER_NAME, client_payload.name)
                   << std::endl;
         std::cout << std::format("{} (\"{}\" number) + {} (\"{}\" number) = {}",
-                                 SERVER_NUMBER, SERVER_NAME, cli_pload.number,
-                                 cli_pload.name,
-                                 SERVER_NUMBER + cli_pload.number)
+                                 SERVER_NUMBER, SERVER_NAME, client_payload.number,
+                                 client_payload.name,
+                                 SERVER_NUMBER + client_payload.number)
                   << std::endl;
 
-        payload ser_pload;
-        memcpy(ser_pload.name, SERVER_NAME, sizeof(payload::name));
-        ser_pload.number = SERVER_NUMBER;
+        payload server_payload;
+        memcpy(server_payload.name, SERVER_NAME, sizeof(payload::name));
+        server_payload.number = SERVER_NUMBER;
 
-        if (send(client_socket, &ser_pload, sizeof(ser_pload), 0) == -1) {
+        if (send(client_socket, &server_payload, sizeof(server_payload), 0) == -1) {
             std::cerr << "Failed to send data to client: " << strerror(errno)
                       << std::endl;
         }
 
-        if (cli_pload.number < 1 || cli_pload.number > 100) {
+        if (client_payload.number < 1 || client_payload.number > 100) {
             shutdown();
         }
 
@@ -123,12 +123,12 @@ class Server {
         }
 #endif
 
-        sockaddr_in ser_addr = {.sin_family = AF_INET,
+        sockaddr_in server_address = {.sin_family = AF_INET,
                                 .sin_port = htons(server_port),
                                 .sin_addr = {.s_addr = INADDR_ANY}};
 
         // bind address
-        if (bind(server_socket, (sockaddr *)&ser_addr, sizeof(ser_addr)) ==
+        if (bind(server_socket, (sockaddr *)&server_address, sizeof(server_address)) ==
             -1) {
             std::cerr << strerror(errno) << std::endl;
             return 1;
