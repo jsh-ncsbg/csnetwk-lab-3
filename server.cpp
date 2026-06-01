@@ -10,6 +10,9 @@
 #include <memory>
 #include <thread>
 #include <vector>
+#include <queue>
+#include <mutex>
+#include <condition_variable>
 
 #define SERVER_PORT 8000
 
@@ -21,12 +24,73 @@ typedef struct {
 int64_t SERVER_NUMBER = 42;
 char SERVER_NAME[64] = "Server of the Sokoboys";
 
+class ThreadPool {
+    public:
+      explicit ThreadPool(size_t num_threads) { for (size_t i = 0; i < num_threads; ++i) {
+              threads.emplace_back([this] {
+                  for (;;) {
+                      std::function<void()> task;
+                      {
+                          std::unique_lock lock(mtx);
+                          cv.wait(lock,
+                                  [this] { return stop || !tasks.empty(); });
+                          if (stop && tasks.empty())
+                              return;
+
+                          task = std::move(tasks.front());
+                          tasks.pop();
+                      }
+
+                      task();
+                  }
+              });
+          }
+      }
+
+      template<typename F, typename... Args>
+      void enqueue(F&& f, Args&&... args) {
+          auto task =
+              std::bind(std::forward<F>(f), std::forward<Args>(args)...);
+
+          if (stop.load(std::memory_order_relaxed))
+              throw std::runtime_error("enqueue on stopped ThreadPool");
+
+          {
+              std::scoped_lock lock(mtx);
+              tasks.emplace(std::move(task));
+          }
+
+        cv.notify_one();
+      }
+
+      ~ThreadPool() {
+        {
+            std::scoped_lock lock(mtx);
+            stop = true;
+        }
+        cv.notify_all();
+        for (auto& t: threads) {
+            if (t.joinable())
+                t.join();
+        }
+      }
+
+    private:
+      std::vector<std::thread> threads;
+      std::queue<std::function<void()>> tasks;
+      std::mutex mtx;
+      std::condition_variable cv;
+      std::atomic<bool> stop = false;
+};
+
 class Server {
     int server_socket = -1;
     int server_port;
 
     std::atomic<bool> is_running = false; // shared variable for workers
     std::vector<std::thread> workers;
+
+    ThreadPool thread_pool;
 
     void handle_client(int client_socket) {
         char buffer[128];
@@ -80,7 +144,7 @@ class Server {
     }
 
   public:
-    Server(int server_port) : server_port(server_port) {}
+    Server(int server_port) : server_port(server_port), thread_pool(std::thread::hardware_concurrency()) {}
 
     int start() {
         // create socket
@@ -123,16 +187,7 @@ class Server {
                 continue;
             }
 
-            auto t = std::thread(&Server::handle_client, this, client_socket);
-            t.detach();
-            workers.push_back(std::move(t));
-        }
-
-        // ensure workers finish before exiting start()
-        for (auto &t : workers) {
-            if (t.joinable()) {
-                t.join();
-            }
+            thread_pool.enqueue(&Server::handle_client, this, client_socket);
         }
 
         return 0;
