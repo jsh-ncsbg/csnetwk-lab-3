@@ -4,10 +4,14 @@
 #include <unistd.h>
 
 #include <atomic>
+#include <condition_variable>
 #include <cstring>
 #include <format>
+#include <functional>
 #include <iostream>
 #include <memory>
+#include <mutex>
+#include <queue>
 #include <thread>
 #include <vector>
 
