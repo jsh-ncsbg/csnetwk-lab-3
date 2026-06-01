@@ -10,9 +10,6 @@
 #include <memory>
 #include <thread>
 #include <vector>
-#include <queue>
-#include <mutex>
-#include <condition_variable>
 
 #define SERVER_PORT 8000
 
@@ -24,73 +21,12 @@ typedef struct {
 int64_t SERVER_NUMBER = 42;
 char SERVER_NAME[64] = "Server of the Sokoboys";
 
-class ThreadPool {
-    public:
-      explicit ThreadPool(size_t num_threads) { for (size_t i = 0; i < num_threads; ++i) {
-              threads.emplace_back([this] {
-                  for (;;) {
-                      std::function<void()> task;
-                      {
-                          std::unique_lock lock(mtx);
-                          cv.wait(lock,
-                                  [this] { return stop || !tasks.empty(); });
-                          if (stop && tasks.empty())
-                              return;
-
-                          task = std::move(tasks.front());
-                          tasks.pop();
-                      }
-
-                      task();
-                  }
-              });
-          }
-      }
-
-      template<typename F, typename... Args>
-      void enqueue(F&& f, Args&&... args) {
-          auto task =
-              std::bind(std::forward<F>(f), std::forward<Args>(args)...);
-
-          if (stop.load(std::memory_order_relaxed))
-              throw std::runtime_error("enqueue on stopped ThreadPool");
-
-          {
-              std::scoped_lock lock(mtx);
-              tasks.emplace(std::move(task));
-          }
-
-        cv.notify_one();
-      }
-
-      ~ThreadPool() {
-        {
-            std::scoped_lock lock(mtx);
-            stop = true;
-        }
-        cv.notify_all();
-        for (auto& t: threads) {
-            if (t.joinable())
-                t.join();
-        }
-      }
-
-    private:
-      std::vector<std::thread> threads;
-      std::queue<std::function<void()>> tasks;
-      std::mutex mtx;
-      std::condition_variable cv;
-      std::atomic<bool> stop = false;
-};
-
 class Server {
     int server_socket = -1;
     int server_port;
 
     std::atomic<bool> is_running = false; // shared variable for workers
     std::vector<std::thread> workers;
-
-    ThreadPool thread_pool;
 
     void handle_client(int client_socket) {
         char buffer[128];
@@ -110,6 +46,8 @@ class Server {
             else
                 std::cerr << "Failed to receive data from client: "
                           << strerror(errno) << std::endl;
+            close(client_socket);
+            return;
         }
 
         memcpy(&cli_pload, buffer, sizeof(cli_pload));
@@ -143,8 +81,28 @@ class Server {
         return;
     }
 
+    void worker_thread() {
+        while (is_running) {
+            int client_socket = accept(server_socket, nullptr, nullptr);
+            if (!is_running) {
+                if (client_socket >= 0) {
+                    close(client_socket);
+                }
+                break;
+            }
+            if (client_socket < 0) {
+                if (errno == EBADF || errno == EINVAL || errno == ENOTSOCK || errno == ECONNABORTED) {
+                    break;
+                }
+                std::cerr << "Failed to accept connection: " << strerror(errno) << std::endl;
+                continue;
+            }
+            handle_client(client_socket);
+        }
+    }
+
   public:
-    Server(int server_port) : server_port(server_port), thread_pool(std::thread::hardware_concurrency()) {}
+    Server(int server_port) : server_port(server_port) {}
 
     int start() {
         // create socket
@@ -152,6 +110,17 @@ class Server {
             std::cerr << strerror(errno) << std::endl;
             return 1;
         }
+
+        // set SO_REUSEADDR and SO_REUSEPORT to prevent "Address already in use" errors
+        int opt = 1;
+        if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
+            std::cerr << "setsockopt SO_REUSEADDR failed: " << strerror(errno) << std::endl;
+        }
+#ifdef SO_REUSEPORT
+        if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) == -1) {
+            std::cerr << "setsockopt SO_REUSEPORT failed: " << strerror(errno) << std::endl;
+        }
+#endif
 
         sockaddr_in ser_addr = {.sin_family = AF_INET,
                                 .sin_port = htons(server_port),
@@ -165,7 +134,7 @@ class Server {
         }
 
         // prepare to accept connection
-        if (listen(server_socket, 5) == -1) {
+        if (listen(server_socket, 1024) == -1) {
             std::cerr << strerror(errno) << std::endl;
             return 1;
         }
@@ -176,34 +145,42 @@ class Server {
 
         is_running = true;
 
-        while (is_running) {
-            // wait for client connections
-            int client_socket = accept(server_socket, nullptr, nullptr);
-            if (!is_running)
-                break;
+        unsigned int num_threads = std::thread::hardware_concurrency();
+        if (num_threads == 0) num_threads = 4;
 
-            if (client_socket < 0) {
-                std::cerr << strerror(errno) << std::endl;
-                continue;
+        for (unsigned int i = 0; i < num_threads; ++i) {
+            workers.emplace_back(&Server::worker_thread, this);
+        }
+
+        for (auto& worker : workers) {
+            if (worker.joinable()) {
+                worker.join();
             }
-
-            thread_pool.enqueue(&Server::handle_client, this, client_socket);
         }
 
         return 0;
     }
 
     void shutdown() {
-        if (server_socket != -1) {
-            close(server_socket);
+        bool expected = true;
+        if (is_running.compare_exchange_strong(expected, false)) {
+            if (server_socket != -1) {
+                int fd = server_socket;
+                server_socket = -1;
+                ::shutdown(fd, SHUT_RDWR);
+                close(fd);
+            }
         }
-        ::shutdown(server_socket, SHUT_RDWR);
-        is_running = false;
     }
 
     ~Server() {
         std::cout << "Shutting down server..." << std::endl;
         shutdown();
+        for (auto& worker : workers) {
+            if (worker.joinable()) {
+                worker.join();
+            }
+        }
     }
 };
 
