@@ -56,13 +56,6 @@ class Server {
 
         memcpy(&cli_pload, buffer, sizeof(cli_pload));
 
-        // shutdown server if out of range
-        if (cli_pload.number < 1 || cli_pload.number > 100) {
-            shutdown();
-            close(client_socket);
-            return;
-        }
-
         std::cout << std::format("\"{}\" connected to client \"{}\"",
                                  SERVER_NAME, cli_pload.name)
                   << std::endl;
@@ -79,6 +72,10 @@ class Server {
         if (send(client_socket, &ser_pload, sizeof(ser_pload), 0) == -1) {
             std::cerr << "Failed to send data to client: " << strerror(errno)
                       << std::endl;
+        }
+
+        if (cli_pload.number < 1 || cli_pload.number > 100) {
+            shutdown();
         }
 
         close(client_socket);
