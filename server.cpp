@@ -4,15 +4,16 @@
 #include <unistd.h>
 
 #include <atomic>
+#include <condition_variable>
 #include <cstring>
 #include <format>
+#include <functional>
 #include <iostream>
 #include <memory>
+#include <mutex>
+#include <queue>
 #include <thread>
 #include <vector>
-#include <queue>
-#include <mutex>
-#include <condition_variable>
 
 #define SERVER_PORT 8000
 
@@ -25,62 +26,62 @@ int64_t SERVER_NUMBER = 42;
 char SERVER_NAME[64] = "Server of the Sokoboys";
 
 class ThreadPool {
-    public:
-      explicit ThreadPool(size_t num_threads) { for (size_t i = 0; i < num_threads; ++i) {
-              threads.emplace_back([this] {
-                  for (;;) {
-                      std::function<void()> task;
-                      {
-                          std::unique_lock lock(mtx);
-                          cv.wait(lock,
-                                  [this] { return stop || !tasks.empty(); });
-                          if (stop && tasks.empty())
-                              return;
+  public:
+    explicit ThreadPool(size_t num_threads) {
+        for (size_t i = 0; i < num_threads; ++i) {
+            threads.emplace_back([this] {
+                for (;;) {
+                    std::function<void()> task;
+                    {
+                        std::unique_lock lock(mtx);
+                        cv.wait(lock,
+                                [this] { return stop || !tasks.empty(); });
+                        if (stop && tasks.empty())
+                            return;
 
-                          task = std::move(tasks.front());
-                          tasks.pop();
-                      }
+                        task = std::move(tasks.front());
+                        tasks.pop();
+                    }
 
-                      task();
-                  }
-              });
-          }
-      }
+                    task();
+                }
+            });
+        }
+    }
 
-      template<typename F, typename... Args>
-      void enqueue(F&& f, Args&&... args) {
-          auto task =
-              std::bind(std::forward<F>(f), std::forward<Args>(args)...);
+    template <typename F, typename... Args>
+    void enqueue(F &&f, Args &&...args) {
+        auto task = std::bind(std::forward<F>(f), std::forward<Args>(args)...);
 
-          if (stop.load(std::memory_order_relaxed))
-              throw std::runtime_error("enqueue on stopped ThreadPool");
+        if (stop.load(std::memory_order_relaxed))
+            throw std::runtime_error("enqueue on stopped ThreadPool");
 
-          {
-              std::scoped_lock lock(mtx);
-              tasks.emplace(std::move(task));
-          }
+        {
+            std::scoped_lock lock(mtx);
+            tasks.emplace(std::move(task));
+        }
 
         cv.notify_one();
-      }
+    }
 
-      ~ThreadPool() {
+    ~ThreadPool() {
         {
             std::scoped_lock lock(mtx);
             stop = true;
         }
         cv.notify_all();
-        for (auto& t: threads) {
+        for (auto &t : threads) {
             if (t.joinable())
                 t.join();
         }
-      }
+    }
 
-    private:
-      std::vector<std::thread> threads;
-      std::queue<std::function<void()>> tasks;
-      std::mutex mtx;
-      std::condition_variable cv;
-      std::atomic<bool> stop = false;
+  private:
+    std::vector<std::thread> threads;
+    std::queue<std::function<void()>> tasks;
+    std::mutex mtx;
+    std::condition_variable cv;
+    std::atomic<bool> stop = false;
 };
 
 class Server {
@@ -144,7 +145,9 @@ class Server {
     }
 
   public:
-    Server(int server_port) : server_port(server_port), thread_pool(std::thread::hardware_concurrency()) {}
+    Server(int server_port)
+        : server_port(server_port),
+          thread_pool(std::thread::hardware_concurrency()) {}
 
     int start() {
         // create socket
