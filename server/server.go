@@ -15,14 +15,6 @@ const (
 	SERVER_NUMBER = 67
 )
 
-type Payload int
-
-func sendPayload(connection net.Conn, payload Payload) (err error) {
-	encoder := gob.NewEncoder(connection)
-	err = encoder.Encode(payload)
-	return
-}
-
 func main() {
 	fmt.Println("Starting...")
 	server, err := net.Listen(SERVER_TYPE, SERVER_HOST+":"+SERVER_PORT)
@@ -60,8 +52,7 @@ func handleClient(connection net.Conn) {
 	fmt.Printf("[Server] %d + %d = %d\n", SERVER_NUMBER, clientPayload, SERVER_NUMBER+clientPayload)
 
 	// reply
-	err := sendPayload(connection, SERVER_NUMBER)
-	if err != nil {
-		fmt.Printf("[Server] ")
+	if err := sendPayload(connection, SERVER_NUMBER); err != nil {
+		fmt.Printf("[Server] Failed to send to client")
 	}
 }
