@@ -54,6 +54,6 @@ func main() {
 			continue
 		}
 		fmt.Println("[Server]", connection.RemoteAddr(), "connected")
-		handleClient(connection)
+		go handleClient(connection)
 	}
 }
