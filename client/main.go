@@ -9,17 +9,9 @@ import (
 
 const (
 	SERVER_HOST = "localhost"
-	SERVER_PORT = "8000"
-	SERVER_TYPE = "tcp"
+	SERVER_PORT = "8080"
+	NETWORK     = "tcp"
 )
-
-type Payload int
-
-func sendPayload(connection net.Conn, payload Payload) (err error) {
-	encoder := gob.NewEncoder(connection)
-	err = encoder.Encode(payload)
-	return
-}
 
 func getClientPayload() (clientPayload Payload, err error) {
 	fmt.Print("[Client] Enter a number in [1, 100]: ")
@@ -28,9 +20,19 @@ func getClientPayload() (clientPayload Payload, err error) {
 	return clientPayload, err
 }
 
+func getServerPayload(server *net.Conn) (serverPayload Payload, err error) {
+	decoder := gob.NewDecoder(*server)
+
+	if err := decoder.Decode(&serverPayload); err != nil {
+		return Payload(-1), fmt.Errorf("Decode error: %v", err)
+	}
+
+	return serverPayload, nil
+}
+
 func main() {
 	fmt.Println("[Client] Connecting to server...")
-	conn, err := net.Dial(SERVER_TYPE, SERVER_HOST+":"+SERVER_PORT)
+	conn, err := net.Dial(NETWORK, SERVER_HOST+":"+SERVER_PORT)
 	if err != nil {
 		fmt.Println("[Client] Error connecting to server: ", err.Error())
 		os.Exit(1)
@@ -42,26 +44,22 @@ func main() {
 	clientPayload, err := getClientPayload()
 	if err != nil {
 		fmt.Println("[Client] Input error")
-		os.Exit(1)
+		return
 	}
 
 	err = sendPayload(conn, clientPayload)
 	if err != nil {
 		fmt.Println("[Client] Failed to send to server.")
-		os.Exit(1)
+		return
 	}
 
-	decoder := gob.NewDecoder(conn)
-
-	var serverPayload Payload
-	err = decoder.Decode(&serverPayload)
-	if err != nil {
-		fmt.Println("[Client] Decode error: ", err)
-		os.Exit(1)
+	if 1 <= clientPayload && clientPayload <= 100 {
+		serverPayload, err := getServerPayload(&conn)
+		if err != nil {
+			fmt.Println("[Client] Error communicating with server")
+		} else {
+			sum := serverPayload + clientPayload
+			fmt.Printf("[Client] %d + %d = %d\n", serverPayload, clientPayload, sum)
+		}
 	}
-
-	fmt.Printf("[Client] Received %v\n", serverPayload)
-
-	sum := serverPayload + clientPayload
-	fmt.Printf("[Client] %d + %d = %d\n", serverPayload, clientPayload, sum)
 }
