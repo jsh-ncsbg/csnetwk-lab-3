@@ -1,12 +1,13 @@
 package main
 
 import (
-	"encoding/gob"
 	"flag"
 	"fmt"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/jsh-ncsbg/csnetwk-lab-3/protocol"
 )
 
 type LockedInt struct {
@@ -20,7 +21,7 @@ func (li *LockedInt) Increment() {
 	li.mu.Unlock()
 }
 
-func worker(jobs <-chan int, wg *sync.WaitGroup, success *LockedInt, fails *LockedInt) {
+func worker(jobs <-chan int, delayMs int, wg *sync.WaitGroup, success *LockedInt, fails *LockedInt) {
 	defer wg.Done()
 	for range jobs {
 		conn, err := net.Dial("tcp", "localhost:8000")
@@ -31,17 +32,16 @@ func worker(jobs <-chan int, wg *sync.WaitGroup, success *LockedInt, fails *Lock
 
 		isError := false
 
-		err = sendPayload(conn, Payload(23))
+		time.Sleep(time.Duration(delayMs) * time.Millisecond)
+
+		err = protocol.SendPayload(conn, protocol.Payload(23))
 		if err != nil {
 			fails.Increment()
 			isError = true
 		}
 
-		time.Sleep(50 * time.Millisecond)
-
-		decoder := gob.NewDecoder(conn)
-		var serverPayload Payload
-		if err := decoder.Decode(&serverPayload); err != nil {
+		_, err = protocol.ParsePayload(conn)
+		if err != nil {
 			fails.Increment()
 			isError = true
 		}
@@ -57,6 +57,7 @@ func worker(jobs <-chan int, wg *sync.WaitGroup, success *LockedInt, fails *Lock
 func main() {
 	maxWorkers := flag.Int("concurrent", 50, "number of concurrent users")
 	total := flag.Int("total", 1000, "total number of users")
+	delayMs := flag.Int("delay", 0, "Set time (in milliseconds) before client replies")
 	flag.Parse()
 
 	successCount := LockedInt{}
@@ -70,7 +71,7 @@ func main() {
 	// spawn workers
 	for i := 0; i < *maxWorkers; i++ {
 		wg.Add(1)
-		go worker(jobs, &wg, &successCount, &failCount)
+		go worker(jobs, *delayMs, &wg, &successCount, &failCount)
 	}
 
 	// spawn jobs
