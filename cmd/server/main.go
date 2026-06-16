@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/gob"
 	"flag"
+	"io"
 	"log"
 	"net"
 	"strconv"
@@ -39,11 +40,17 @@ func main() {
 	serverHost := flag.String("hostname", "0.0.0.0", "server host name")
 	serverPort := flag.Int("port", 8000, "server port number")
 	network := flag.String("network", "tcp", "network")
+
+	silent := flag.Bool("silent", false, "disable all log output")
+
 	flag.Parse()
 
 	// logger setup
 	log.SetPrefix("[SERVER] ")
 	log.SetFlags(log.Ltime | log.Lmsgprefix)
+	if *silent {
+		log.SetOutput(io.Discard)
+	}
 
 	server, err := net.Listen(*network, *serverHost+":"+strconv.Itoa(*serverPort))
 	if err != nil {
