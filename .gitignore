@@ -1,3 +1,7 @@
 simulator
-server
 client
+server
+main
+!server/
+!simulator/
+!client/
