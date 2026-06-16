@@ -7,6 +7,8 @@ import (
 	"net"
 	"sync"
 	"time"
+
+	"github.com/jsh-ncsbg/csnetwk-lab-3/protocol"
 )
 
 type LockedInt struct {
@@ -31,7 +33,7 @@ func worker(jobs <-chan int, wg *sync.WaitGroup, success *LockedInt, fails *Lock
 
 		isError := false
 
-		err = sendPayload(conn, Payload(23))
+		err = protocol.SendPayload(conn, protocol.Payload(23))
 		if err != nil {
 			fails.Increment()
 			isError = true
@@ -40,7 +42,7 @@ func worker(jobs <-chan int, wg *sync.WaitGroup, success *LockedInt, fails *Lock
 		time.Sleep(50 * time.Millisecond)
 
 		decoder := gob.NewDecoder(conn)
-		var serverPayload Payload
+		var serverPayload protocol.Payload
 		if err := decoder.Decode(&serverPayload); err != nil {
 			fails.Increment()
 			isError = true

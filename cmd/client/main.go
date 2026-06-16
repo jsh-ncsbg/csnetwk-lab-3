@@ -5,26 +5,28 @@ import (
 	"fmt"
 	"net"
 	"os"
+
+	"github.com/jsh-ncsbg/csnetwk-lab-3/protocol"
 )
 
 const (
 	SERVER_HOST = "localhost"
-	SERVER_PORT = "8080"
+	SERVER_PORT = "8000"
 	NETWORK     = "tcp"
 )
 
-func getClientPayload() (clientPayload Payload, err error) {
+func getClientPayload() (clientPayload protocol.Payload, err error) {
 	fmt.Print("[Client] Enter a number in [1, 100]: ")
 	_, err = fmt.Scan(&clientPayload)
 
 	return clientPayload, err
 }
 
-func getServerPayload(server *net.Conn) (serverPayload Payload, err error) {
+func getServerPayload(server *net.Conn) (serverPayload protocol.Payload, err error) {
 	decoder := gob.NewDecoder(*server)
 
 	if err := decoder.Decode(&serverPayload); err != nil {
-		return Payload(-1), fmt.Errorf("Decode error: %v", err)
+		return protocol.Payload(-1), fmt.Errorf("Decode error: %v", err)
 	}
 
 	return serverPayload, nil
@@ -47,7 +49,7 @@ func main() {
 		return
 	}
 
-	err = sendPayload(conn, clientPayload)
+	err = protocol.SendPayload(conn, clientPayload)
 	if err != nil {
 		fmt.Println("[Client] Failed to send to server.")
 		return
