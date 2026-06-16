@@ -3,19 +3,14 @@ package main
 import (
 	"encoding/gob"
 	"flag"
-	"fmt"
+	"log"
 	"net"
-	"os"
 	"strconv"
 
 	"github.com/jsh-ncsbg/csnetwk-lab-3/protocol"
 )
 
 const (
-	ServerHost = "localhost"
-	ServerPort = 8000
-	NETWORK    = "tcp"
-
 	ServerNumber = 67
 )
 
@@ -27,16 +22,16 @@ func handleClient(connection net.Conn) {
 	var clientPayload protocol.Payload
 
 	if err := decoder.Decode(&clientPayload); err != nil {
-		fmt.Println("[Server] Decode error: ", err)
+		log.Println("Decode error: ", err)
 		return
 	}
 
-	fmt.Printf("[Server] Received %v\n", clientPayload)
-	fmt.Printf("[Server] %d + %d = %d\n", ServerNumber, clientPayload, ServerNumber+clientPayload)
+	log.Printf("Received %v", clientPayload)
+	log.Printf("%d + %d = %d", ServerNumber, clientPayload, ServerNumber+clientPayload)
 
 	// reply
 	if err := protocol.SendPayload(connection, ServerNumber); err != nil {
-		fmt.Printf("[Server] Failed to send to client")
+		log.Printf("Failed to send to client")
 	}
 }
 
@@ -46,23 +41,25 @@ func main() {
 	network := flag.String("network", "tcp", "network")
 	flag.Parse()
 
-	fmt.Println("Starting...")
+	// logger setup
+	log.SetPrefix("[SERVER] ")
+	log.SetFlags(log.Ltime | log.Lmsgprefix)
+
 	server, err := net.Listen(*network, *serverHost+":"+strconv.Itoa(*serverPort))
 	if err != nil {
-		fmt.Println("Failed to start server: ", err)
-		os.Exit(1)
+		log.Fatalln("Failed to start server: ", err)
 	}
 	defer server.Close()
 
-	fmt.Println("[Server] Listening on port", *serverPort)
+	log.Println("Listening on port", *serverPort)
 
 	for {
 		connection, err := server.Accept()
 		if err != nil {
-			fmt.Println("[Server] Connection error. Skipping..")
+			log.Println("Connection error. Skipping..")
 			continue
 		}
-		fmt.Println("[Server]", connection.RemoteAddr(), "connected")
+		log.Println(connection.RemoteAddr(), "connected")
 		go handleClient(connection)
 	}
 }

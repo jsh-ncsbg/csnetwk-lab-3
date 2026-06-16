@@ -4,6 +4,7 @@ import (
 	"encoding/gob"
 	"flag"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"strconv"
@@ -12,7 +13,7 @@ import (
 )
 
 func getClientPayload() (clientPayload protocol.Payload, err error) {
-	fmt.Print("[Client] Enter a number in [1, 100]: ")
+	log.Printf("Enter a number in [1, 100]: ")
 	_, err = fmt.Scan(&clientPayload)
 
 	return clientPayload, err
@@ -34,35 +35,38 @@ func main() {
 	network := flag.String("network", "tcp", "network")
 	flag.Parse()
 
-	fmt.Println("[Client] Connecting to server...")
+	// logger setup
+	log.SetPrefix("[CLIENT] ")
+	log.SetFlags(log.Lmsgprefix | log.Ltime)
+
+	log.Println("Connecting to server...")
 	conn, err := net.Dial(*network, *serverHost+":"+strconv.Itoa(*serverPort))
+
 	if err != nil {
-		fmt.Println("[Client] Error connecting to server: ", err.Error())
-		os.Exit(1)
+		log.Fatalln("Error connecting to server: ", err)
 	}
 	defer conn.Close()
 
-	fmt.Println("[Client] Connected to server")
+	log.Println("Connected to server")
 
 	clientPayload, err := getClientPayload()
 	if err != nil {
-		fmt.Println("[Client] Input error")
-		return
+		log.Fatalln("Input error")
 	}
 
 	err = protocol.SendPayload(conn, clientPayload)
 	if err != nil {
-		fmt.Println("[Client] Failed to send to server.")
-		return
+		log.Println("Failed to send to server.")
+		os.Exit(0)
 	}
 
 	if 1 <= clientPayload && clientPayload <= 100 {
 		serverPayload, err := getServerPayload(&conn)
 		if err != nil {
-			fmt.Println("[Client] Error communicating with server")
+			log.Println("Error communicating with server: ", err)
 		} else {
 			sum := serverPayload + clientPayload
-			fmt.Printf("[Client] %d + %d = %d\n", serverPayload, clientPayload, sum)
+			log.Printf("%d + %d = %d\n", serverPayload, clientPayload, sum)
 		}
 	}
 }
