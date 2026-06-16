@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/gob"
 	"flag"
 	"io"
 	"log"
@@ -18,12 +17,11 @@ const (
 func handleClient(connection net.Conn) {
 	defer connection.Close()
 
-	decoder := gob.NewDecoder(connection)
+	serverPayload := protocol.Payload(ServerNumber)
 
-	var clientPayload protocol.Payload
-
-	if err := decoder.Decode(&clientPayload); err != nil {
-		log.Println("Decode error: ", err)
+	clientPayload, err := protocol.ParsePayload(connection)
+	if err != nil {
+		log.Println("parsing error: ", err)
 		return
 	}
 
@@ -31,7 +29,7 @@ func handleClient(connection net.Conn) {
 	log.Printf("%d + %d = %d", ServerNumber, clientPayload, ServerNumber+clientPayload)
 
 	// reply
-	if err := protocol.SendPayload(connection, ServerNumber); err != nil {
+	if err := protocol.SendPayload(connection, serverPayload); err != nil {
 		log.Printf("Failed to send to client")
 	}
 }

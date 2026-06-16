@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/gob"
 	"flag"
 	"fmt"
 	"net"
@@ -41,9 +40,8 @@ func worker(jobs <-chan int, delayMs int, wg *sync.WaitGroup, success *LockedInt
 			isError = true
 		}
 
-		decoder := gob.NewDecoder(conn)
-		var serverPayload protocol.Payload
-		if err := decoder.Decode(&serverPayload); err != nil {
+		_, err = protocol.ParsePayload(conn)
+		if err != nil {
 			fails.Increment()
 			isError = true
 		}

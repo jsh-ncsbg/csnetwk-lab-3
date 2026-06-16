@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/gob"
 	"flag"
 	"fmt"
 	"log"
@@ -12,21 +11,15 @@ import (
 	"github.com/jsh-ncsbg/csnetwk-lab-3/protocol"
 )
 
-func getClientPayload() (clientPayload protocol.Payload, err error) {
+func getClientPayload() (payload protocol.Payload, err error) {
 	log.Printf("Enter a number in [1, 100]: ")
-	_, err = fmt.Scan(&clientPayload)
 
-	return clientPayload, err
-}
+	var number int
+	_, err = fmt.Scan(&number)
 
-func getServerPayload(server *net.Conn) (serverPayload protocol.Payload, err error) {
-	decoder := gob.NewDecoder(*server)
+	payload = protocol.Payload(number)
 
-	if err := decoder.Decode(&serverPayload); err != nil {
-		return protocol.Payload(-1), fmt.Errorf("Decode error: %v", err)
-	}
-
-	return serverPayload, nil
+	return
 }
 
 func main() {
@@ -61,7 +54,7 @@ func main() {
 	}
 
 	if 1 <= clientPayload && clientPayload <= 100 {
-		serverPayload, err := getServerPayload(&conn)
+		serverPayload, err := protocol.ParsePayload(conn)
 		if err != nil {
 			log.Println("Error communicating with server: ", err)
 		} else {
