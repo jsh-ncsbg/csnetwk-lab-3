@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 
 	"github.com/jsh-ncsbg/csnetwk-lab-3/protocol"
 )
@@ -40,19 +41,20 @@ func handleClient(connection net.Conn) {
 }
 
 func main() {
-	ServerHost := flag.String("hostname", "0.0.0.0", "server host name")
-	ServerPort := flag.Int("port", 8000, "server port number")
+	serverHost := flag.String("hostname", "0.0.0.0", "server host name")
+	serverPort := flag.Int("port", 8000, "server port number")
+	network := flag.String("network", "tcp", "network")
 	flag.Parse()
 
 	fmt.Println("Starting...")
-	server, err := net.Listen(NETWORK, fmt.Sprintf("%s:%d", *ServerHost, *ServerPort))
+	server, err := net.Listen(*network, *serverHost+":"+strconv.Itoa(*serverPort))
 	if err != nil {
 		fmt.Println("Failed to start server: ", err)
 		os.Exit(1)
 	}
 	defer server.Close()
 
-	fmt.Println("[Server] Listening on port", *ServerPort)
+	fmt.Println("[Server] Listening on port", *serverPort)
 
 	for {
 		connection, err := server.Accept()

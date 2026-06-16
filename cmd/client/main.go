@@ -2,17 +2,13 @@ package main
 
 import (
 	"encoding/gob"
+	"flag"
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 
 	"github.com/jsh-ncsbg/csnetwk-lab-3/protocol"
-)
-
-const (
-	SERVER_HOST = "localhost"
-	SERVER_PORT = "8000"
-	NETWORK     = "tcp"
 )
 
 func getClientPayload() (clientPayload protocol.Payload, err error) {
@@ -33,8 +29,13 @@ func getServerPayload(server *net.Conn) (serverPayload protocol.Payload, err err
 }
 
 func main() {
+	serverHost := flag.String("hostname", "localhost", "server host name")
+	serverPort := flag.Int("port", 8000, "server port number")
+	network := flag.String("network", "tcp", "network")
+	flag.Parse()
+
 	fmt.Println("[Client] Connecting to server...")
-	conn, err := net.Dial(NETWORK, SERVER_HOST+":"+SERVER_PORT)
+	conn, err := net.Dial(*network, *serverHost+":"+strconv.Itoa(*serverPort))
 	if err != nil {
 		fmt.Println("[Client] Error connecting to server: ", err.Error())
 		os.Exit(1)
