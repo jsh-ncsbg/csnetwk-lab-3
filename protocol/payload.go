@@ -2,13 +2,19 @@ package protocol
 
 import (
 	"encoding/gob"
-	"net"
+	"io"
 )
 
 type Payload int
 
-func SendPayload(connection net.Conn, payload Payload) (err error) {
-	encoder := gob.NewEncoder(connection)
+func SendPayload(w io.Writer, payload Payload) (err error) {
+	encoder := gob.NewEncoder(w)
 	err = encoder.Encode(payload)
+	return
+}
+
+func ParsePayload(r io.Reader) (payload Payload, err error) {
+	dec := gob.NewDecoder(r)
+	err = dec.Decode(&payload)
 	return
 }
