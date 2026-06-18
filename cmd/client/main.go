@@ -56,14 +56,14 @@ func main() {
 	}
 
 	// send to server
-	err = protocol.SendPayload(conn, clientPayload)
+	err = protocol.EncodePayload(conn, clientPayload)
 	if err != nil {
 		log.Println("Failed to send to server.")
 		os.Exit(0)
 	}
 
 	if 1 <= clientPayload.Number && clientPayload.Number <= 100 {
-		serverPayload, err := protocol.ParsePayload(conn)
+		serverPayload, err := protocol.DecodePayload(conn)
 		if err != nil {
 			log.Println("Error communicating with server: ", err)
 		} else {

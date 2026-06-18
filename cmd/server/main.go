@@ -23,7 +23,7 @@ func handleClient(connection net.Conn) {
 		Number: ServerNumber,
 	}
 
-	clientPayload, err := protocol.ParsePayload(connection)
+	clientPayload, err := protocol.DecodePayload(connection)
 	if err != nil {
 		log.Println("parsing error: ", err)
 		return
@@ -33,7 +33,7 @@ func handleClient(connection net.Conn) {
 	log.Printf("%d + %d = %d", serverPayload.Number, clientPayload.Number, serverPayload.Number+clientPayload.Number)
 
 	// reply
-	if err := protocol.SendPayload(connection, serverPayload); err != nil {
+	if err := protocol.EncodePayload(connection, serverPayload); err != nil {
 		log.Printf("Failed to send to client")
 	}
 }

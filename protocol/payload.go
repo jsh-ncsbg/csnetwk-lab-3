@@ -1,23 +1,20 @@
 package protocol
 
 import (
-	"encoding/gob"
+	"encoding/json"
 	"io"
 )
 
 type Payload struct {
-	Name   string
-	Number int
+	Name   string `json:"name"`
+	Number int    `json:"number"`
 }
 
-func SendPayload(w io.Writer, payload Payload) (err error) {
-	encoder := gob.NewEncoder(w)
-	err = encoder.Encode(payload)
-	return
+func EncodePayload(w io.Writer, payload Payload) (err error) {
+	return json.NewEncoder(w).Encode(payload)
 }
 
-func ParsePayload(r io.Reader) (payload Payload, err error) {
-	dec := gob.NewDecoder(r)
-	err = dec.Decode(&payload)
+func DecodePayload(r io.Reader) (payload Payload, err error) {
+	err = json.NewDecoder(r).Decode(&payload)
 	return
 }

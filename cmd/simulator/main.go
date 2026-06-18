@@ -40,7 +40,7 @@ func worker(jobs <-chan int, delayMs int, wg *sync.WaitGroup, success *LockedInt
 			isError = true
 		}
 
-		_, err = protocol.ParsePayload(conn)
+		_, err = protocol.DecodePayload(conn)
 		if err != nil {
 			fails.Increment()
 			isError = true
