@@ -34,7 +34,7 @@ func worker(jobs <-chan int, delayMs int, wg *sync.WaitGroup, success *LockedInt
 
 		time.Sleep(time.Duration(delayMs) * time.Millisecond)
 
-		err = protocol.SendPayload(conn, protocol.Payload(23))
+		err = protocol.EncodePayload(conn, protocol.Payload{Name: "Josh", Number: 1})
 		if err != nil {
 			fails.Increment()
 			isError = true

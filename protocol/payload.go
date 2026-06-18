@@ -5,7 +5,10 @@ import (
 	"io"
 )
 
-type Payload int
+type Payload struct {
+	Name   string
+	Number int
+}
 
 func SendPayload(w io.Writer, payload Payload) (err error) {
 	encoder := gob.NewEncoder(w)

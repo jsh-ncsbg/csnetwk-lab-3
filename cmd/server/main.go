@@ -11,13 +11,17 @@ import (
 )
 
 const (
+	ServerName   = "Josh"
 	ServerNumber = 67
 )
 
 func handleClient(connection net.Conn) {
 	defer connection.Close()
 
-	serverPayload := protocol.Payload(ServerNumber)
+	serverPayload := protocol.Payload{
+		Name:   ServerName,
+		Number: ServerNumber,
+	}
 
 	clientPayload, err := protocol.ParsePayload(connection)
 	if err != nil {
@@ -25,8 +29,8 @@ func handleClient(connection net.Conn) {
 		return
 	}
 
-	log.Printf("Received %v", clientPayload)
-	log.Printf("%d + %d = %d", ServerNumber, clientPayload, ServerNumber+clientPayload)
+	log.Printf("received %d from %v", clientPayload.Number, clientPayload.Name)
+	log.Printf("%d + %d = %d", serverPayload.Number, clientPayload.Number, serverPayload.Number+clientPayload.Number)
 
 	// reply
 	if err := protocol.SendPayload(connection, serverPayload); err != nil {
