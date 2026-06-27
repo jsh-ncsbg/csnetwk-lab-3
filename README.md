@@ -6,16 +6,42 @@ This CSNETWK Laboratory Activity demonstrates basic TCP socket communication bet
 
 ## Getting Started
 
-### Client
+You can run the project using the automated Makefile shortcuts or by executing the Go commands manually.
+
+### Using the Makefile (Recommended)
+
+To run the Server:
+
+```bash
+make run-server
+```
+
+To run the Client:
+
+```bash
+make run-client
+```
+
+To build both binaries without running them:
+
+```bash
+make build
+```
+
+_Note: Compiled binaries will be saved inside the local `bin/` directory._
+
+### Using Manual Go Commands
+
+If you prefer to run the source files directly without using the Makefile:
+
+Server:
 
 ```bash
 go run ./cmd/server
 ```
 
-### Server
+Client:
 
 ```bash
 go run ./cmd/client
 ```
-
-Alternatively, build and run the executable.
