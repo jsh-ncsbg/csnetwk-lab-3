@@ -16,13 +16,10 @@ const (
 func handleClient(conn net.Conn) {
 	defer conn.Close()
 
-	svrPayload := protocol.Payload{
-		Name:   ServerName,
-		Number: ServerNumber,
-	}
+	svrPayload := protocol.NewPayload(ServerName, ServerNumber)
 
-	var cltPayload protocol.Payload
-	err := json.Read(conn, &cltPayload)
+	cltPayload := &protocol.Payload{}
+	err := json.Read(conn, cltPayload)
 	if err != nil {
 		log.Println("parsing error: ", err)
 		return

@@ -50,9 +50,9 @@ func serve(r io.Reader, rw io.ReadWriter) {
 	}
 
 	if 1 <= cltPayload.Number && cltPayload.Number <= 100 {
-		var svrPayload protocol.Payload
+		svrPayload := &protocol.Payload{}
 
-		err := json.Read(rw, &svrPayload)
+		err := json.Read(rw, svrPayload)
 		if err != nil {
 			log.Println("Error communicating with server: ", err)
 		} else {
