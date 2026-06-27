@@ -36,7 +36,7 @@ func (c *Client) Close() error {
 	return c.conn.Close()
 }
 
-func (c *Client) Start() error {
+func (c *Client) Dial() error {
 	addr := net.JoinHostPort(c.serverCfg.Host, strconv.Itoa(c.serverCfg.Port))
 
 	conn, err := net.Dial(c.serverCfg.Network, addr)
@@ -45,7 +45,9 @@ func (c *Client) Start() error {
 	}
 
 	c.conn = conn
-
-	c.handler.Serve(c.in, conn)
 	return nil
+}
+
+func (c *Client) Start() {
+	c.handler.Serve(c.in, c.conn)
 }

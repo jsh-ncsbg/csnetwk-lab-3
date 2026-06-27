@@ -29,10 +29,11 @@ func main() {
 	client := client.NewClient(os.Stdin, serverConfig)
 	client.HandleFunc(serve)
 
-	if err := client.Start(); err != nil {
-		log.Fatalln("Error connecting to server: ", err)
+	if err := client.Dial(); err != nil {
+		log.Fatalln("error connecting to server: ", err)
 	}
-
-	log.Println("Connected to server")
 	defer client.Close()
+	log.Println("connected to server")
+
+	client.Start()
 }
