@@ -3,13 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
-	"net"
 	"os"
-	"strconv"
 
+	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/client"
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/json"
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/protocol"
+	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/server"
 )
 
 func getClientPayload() (payload protocol.Payload, err error) {
@@ -31,33 +32,14 @@ func getClientPayload() (payload protocol.Payload, err error) {
 	return protocol.Payload{Name: name, Number: number}, err
 }
 
-func main() {
-	serverHost := flag.String("hostname", "localhost", "server host name")
-	serverPort := flag.Int("port", 8000, "server port number")
-	network := flag.String("network", "tcp", "network")
-	flag.Parse()
-
-	// logger setup
-	log.SetPrefix("[CLIENT] ")
-	log.SetFlags(log.Lmsgprefix | log.Ltime)
-
-	log.Println("Connecting to server...")
-	conn, err := net.Dial(*network, *serverHost+":"+strconv.Itoa(*serverPort))
-
-	if err != nil {
-		log.Fatalln("Error connecting to server: ", err)
-	}
-	defer conn.Close()
-
-	log.Println("Connected to server")
-
+func serve(r io.Reader, rw io.ReadWriter) {
 	cltPayload, err := getClientPayload()
 	if err != nil {
 		log.Fatalln("Input error")
 	}
 
 	// send to server
-	err = json.Write(conn, cltPayload)
+	err = json.Write(rw, cltPayload)
 	if err != nil {
 		log.Println("Failed to send to server.")
 		os.Exit(0)
@@ -66,7 +48,7 @@ func main() {
 	if 1 <= cltPayload.Number && cltPayload.Number <= 100 {
 		var svrPayload protocol.Payload
 
-		err := json.Read(conn, &svrPayload)
+		err := json.Read(rw, &svrPayload)
 		if err != nil {
 			log.Println("Error communicating with server: ", err)
 		} else {
@@ -76,4 +58,32 @@ func main() {
 			log.Printf("%d + %d = %d\n", svrPayload.Number, cltPayload.Number, sum)
 		}
 	}
+}
+
+func main() {
+	serverHost := flag.String("hostname", "localhost", "server host name")
+	serverPort := flag.Int("port", 8000, "server port number")
+
+	flag.Parse()
+
+	// logger setup
+	log.SetPrefix("[CLIENT] ")
+	log.SetFlags(log.Lmsgprefix | log.Ltime)
+
+	log.Println("Connecting to server...")
+	serverConfig := server.Config{
+		Host:    *serverHost,
+		Port:    *serverPort,
+		Network: "tcp",
+	}
+
+	client := client.NewClient(os.Stdin, serverConfig)
+	client.HandleFunc(serve)
+
+	if err := client.Start(); err != nil {
+		log.Fatalln("Error connecting to server: ", err)
+	}
+
+	log.Println("Connected to server")
+	defer client.Close()
 }
