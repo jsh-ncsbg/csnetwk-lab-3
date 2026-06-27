@@ -5,27 +5,30 @@ import (
 	"net"
 	"strconv"
 
+	"github.com/jsh-ncsbg/csnetwk-lab-3/pkg/logger"
 	"github.com/jsh-ncsbg/csnetwk-lab-3/pkg/server"
 )
 
 type Client struct {
 	in        io.Reader
 	out       io.Writer
+	logger    logger.Logger
 	conn      net.Conn
 	serverCfg server.Config
 	handler   HandlerFunc
 }
 
-type HandlerFunc func(io.Writer, io.Reader, io.ReadWriter)
+type HandlerFunc func(logger.Logger, io.Writer, io.Reader, io.ReadWriter)
 
-func (f HandlerFunc) Serve(w io.Writer, r io.Reader, conn io.ReadWriter) {
-	f(w, r, conn)
+func (f HandlerFunc) Serve(logger logger.Logger, w io.Writer, r io.Reader, conn io.ReadWriter) {
+	f(logger, w, r, conn)
 }
 
-func NewClient(out io.Writer, in io.Reader, serverCfg server.Config) *Client {
+func NewClient(logger logger.Logger, out io.Writer, in io.Reader, serverCfg server.Config) *Client {
 	return &Client{
 		in:        in,
 		out:       out,
+		logger:    logger,
 		serverCfg: serverCfg,
 	}
 }
@@ -51,5 +54,5 @@ func (c *Client) Dial() error {
 }
 
 func (c *Client) Start() {
-	c.handler.Serve(c.out, c.in, c.conn)
+	c.handler.Serve(c.logger, c.out, c.in, c.conn)
 }

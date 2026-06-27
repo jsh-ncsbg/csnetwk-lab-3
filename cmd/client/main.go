@@ -2,11 +2,11 @@ package main
 
 import (
 	"flag"
-	"log"
 	"os"
 
 	intlClient "github.com/jsh-ncsbg/csnetwk-lab-3/internal/client"
 	pkgClient "github.com/jsh-ncsbg/csnetwk-lab-3/pkg/client"
+	"github.com/jsh-ncsbg/csnetwk-lab-3/pkg/logger"
 	"github.com/jsh-ncsbg/csnetwk-lab-3/pkg/server"
 )
 
@@ -17,24 +17,24 @@ func main() {
 	flag.Parse()
 
 	// logger setup
-	log.SetPrefix("[CLIENT] ")
-	log.SetFlags(log.Lmsgprefix | log.Ltime)
+	logger := logger.NewLogger("CLIENT", os.Stdout)
 
-	log.Println("Connecting to server...")
+	logger.Println("connecting to server...")
 	serverConfig := server.Config{
 		Host:    *serverHost,
 		Port:    *serverPort,
 		Network: "tcp",
 	}
 
-	client := pkgClient.NewClient(os.Stdout, os.Stdin, serverConfig)
+	client := pkgClient.NewClient(logger, os.Stdout, os.Stdin, serverConfig)
 	client.HandleFunc(intlClient.Serve)
 
 	if err := client.Dial(); err != nil {
-		log.Fatalln("error connecting to server: ", err)
+		logger.Println("error connecting to server: ", err)
+		os.Exit(1)
 	}
 	defer client.Close()
-	log.Println("connected to server")
+	logger.Println("connected to server")
 
 	client.Start()
 }

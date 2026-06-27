@@ -4,12 +4,12 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"log"
 	"strconv"
 	"strings"
 
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/protocol"
 	"github.com/jsh-ncsbg/csnetwk-lab-3/pkg/json"
+	"github.com/jsh-ncsbg/csnetwk-lab-3/pkg/logger"
 )
 
 func getClientPayload(w io.Writer, r io.Reader) (*protocol.Payload, error) {
@@ -35,16 +35,17 @@ func getClientPayload(w io.Writer, r io.Reader) (*protocol.Payload, error) {
 	return protocol.NewPayload(cltName, cltNumber), nil
 }
 
-func Serve(w io.Writer, r io.Reader, rw io.ReadWriter) {
+func Serve(logger logger.Logger, w io.Writer, r io.Reader, rw io.ReadWriter) {
 	cltPayload, err := getClientPayload(w, r)
 	if err != nil {
-		log.Fatalln("Input error")
+		logger.Println("Input error")
+		return
 	}
 
 	// send to server
 	err = json.Write(rw, cltPayload)
 	if err != nil {
-		fmt.Fprint(w, "failed to send to server: ", err)
+		logger.Println("failed to send to server: ", err)
 		return
 	}
 
@@ -53,12 +54,12 @@ func Serve(w io.Writer, r io.Reader, rw io.ReadWriter) {
 
 		err := json.Read(rw, svrPayload)
 		if err != nil {
-			fmt.Fprintln(w, "error communicating with server: ", err)
+			logger.Println("error communicating with server: ", err)
 		} else {
-			fmt.Fprintf(w, "received %d from server %v", svrPayload.Number, svrPayload.Name)
+			logger.Printf("received %d from server %v\n", svrPayload.Number, svrPayload.Name)
 
 			sum := svrPayload.Number + cltPayload.Number
-			fmt.Fprintf(w, "%d + %d = %d\n", svrPayload.Number, cltPayload.Number, sum)
+			logger.Printf("%d + %d = %d\n", svrPayload.Number, cltPayload.Number, sum)
 		}
 	}
 }
