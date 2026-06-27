@@ -61,7 +61,7 @@ func serve(r io.Reader, rw io.ReadWriter) {
 }
 
 func main() {
-	serverHost := flag.String("hostname", "localhost", "server host name")
+	serverHost := flag.String("host", "localhost", "server host name")
 	serverPort := flag.Int("port", 8000, "server port number")
 
 	flag.Parse()

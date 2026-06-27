@@ -41,7 +41,7 @@ func handleClient(conn net.Conn) {
 }
 
 func main() {
-	serverHost := flag.String("hostname", "0.0.0.0", "server host name")
+	serverHost := flag.String("host", "", "server host name")
 	serverPort := flag.Int("port", 8000, "server port number")
 
 	silent := flag.Bool("silent", false, "disable all log output")
