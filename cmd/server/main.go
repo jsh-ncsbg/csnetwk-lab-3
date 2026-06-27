@@ -5,10 +5,10 @@ import (
 	"io"
 	"log"
 	"net"
-	"strconv"
 
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/json"
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/protocol"
+	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/server"
 )
 
 const (
@@ -25,7 +25,7 @@ func handleClient(conn net.Conn) {
 	}
 
 	var cltPayload protocol.Payload
-	err := json.Read(conn, cltPayload)
+	err := json.Read(conn, &cltPayload)
 	if err != nil {
 		log.Println("parsing error: ", err)
 		return
@@ -43,7 +43,6 @@ func handleClient(conn net.Conn) {
 func main() {
 	serverHost := flag.String("hostname", "0.0.0.0", "server host name")
 	serverPort := flag.Int("port", 8000, "server port number")
-	network := flag.String("network", "tcp", "network")
 
 	silent := flag.Bool("silent", false, "disable all log output")
 
@@ -56,21 +55,20 @@ func main() {
 		log.SetOutput(io.Discard)
 	}
 
-	server, err := net.Listen(*network, *serverHost+":"+strconv.Itoa(*serverPort))
+	serverConfig := server.Config{
+		Host:    *serverHost,
+		Port:    *serverPort,
+		Network: "tcp",
+	}
+	server := server.NewServer(serverConfig)
+
+	err := server.Run()
 	if err != nil {
-		log.Fatalln("Failed to start server: ", err)
+		log.Fatal("failed to start server", err)
 	}
 	defer server.Close()
+	log.Print("listening on ", serverConfig.Host, ":", serverConfig.Port)
 
-	log.Println("Listening on port", *serverPort)
-
-	for {
-		conn, err := server.Accept()
-		if err != nil {
-			log.Println("Connection error. Skipping..")
-			continue
-		}
-		log.Println(conn.RemoteAddr(), "connected")
-		go handleClient(conn)
-	}
+	server.HandleFunc(handleClient)
+	server.Start()
 }
