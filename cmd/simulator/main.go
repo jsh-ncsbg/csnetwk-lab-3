@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/json"
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/protocol"
 )
 
@@ -34,13 +35,14 @@ func worker(jobs <-chan int, delayMs int, wg *sync.WaitGroup, success *LockedInt
 
 		time.Sleep(time.Duration(delayMs) * time.Millisecond)
 
-		err = protocol.EncodePayload(conn, protocol.Payload{Name: "Josh", Number: 1})
+		err = json.Write(conn, protocol.Payload{Name: "Josh", Number: 1})
 		if err != nil {
 			fails.Increment()
 			isError = true
 		}
 
-		_, err = protocol.DecodePayload(conn)
+		var tmp protocol.Payload
+		err = json.Read(conn, &tmp)
 		if err != nil {
 			fails.Increment()
 			isError = true

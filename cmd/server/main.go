@@ -7,6 +7,7 @@ import (
 	"net"
 	"strconv"
 
+	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/json"
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/protocol"
 )
 
@@ -15,25 +16,26 @@ const (
 	ServerNumber = 67
 )
 
-func handleClient(connection net.Conn) {
-	defer connection.Close()
+func handleClient(conn net.Conn) {
+	defer conn.Close()
 
-	serverPayload := protocol.Payload{
+	svrPayload := protocol.Payload{
 		Name:   ServerName,
 		Number: ServerNumber,
 	}
 
-	clientPayload, err := protocol.DecodePayload(connection)
+	var cltPayload protocol.Payload
+	err := json.Read(conn, cltPayload)
 	if err != nil {
 		log.Println("parsing error: ", err)
 		return
 	}
 
-	log.Printf("received %d from %v", clientPayload.Number, clientPayload.Name)
-	log.Printf("%d + %d = %d", serverPayload.Number, clientPayload.Number, serverPayload.Number+clientPayload.Number)
+	log.Printf("received %d from %v", cltPayload.Number, cltPayload.Name)
+	log.Printf("%d + %d = %d", svrPayload.Number, cltPayload.Number, svrPayload.Number+cltPayload.Number)
 
 	// reply
-	if err := protocol.EncodePayload(connection, serverPayload); err != nil {
+	if err := json.Write(conn, svrPayload); err != nil {
 		log.Printf("Failed to send to client")
 	}
 }
@@ -63,12 +65,12 @@ func main() {
 	log.Println("Listening on port", *serverPort)
 
 	for {
-		connection, err := server.Accept()
+		conn, err := server.Accept()
 		if err != nil {
 			log.Println("Connection error. Skipping..")
 			continue
 		}
-		log.Println(connection.RemoteAddr(), "connected")
-		go handleClient(connection)
+		log.Println(conn.RemoteAddr(), "connected")
+		go handleClient(conn)
 	}
 }

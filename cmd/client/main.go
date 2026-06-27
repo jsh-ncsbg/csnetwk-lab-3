@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/json"
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/protocol"
 )
 
@@ -50,27 +51,29 @@ func main() {
 
 	log.Println("Connected to server")
 
-	clientPayload, err := getClientPayload()
+	cltPayload, err := getClientPayload()
 	if err != nil {
 		log.Fatalln("Input error")
 	}
 
 	// send to server
-	err = protocol.EncodePayload(conn, clientPayload)
+	err = json.Write(conn, cltPayload)
 	if err != nil {
 		log.Println("Failed to send to server.")
 		os.Exit(0)
 	}
 
-	if 1 <= clientPayload.Number && clientPayload.Number <= 100 {
-		serverPayload, err := protocol.DecodePayload(conn)
+	if 1 <= cltPayload.Number && cltPayload.Number <= 100 {
+		var svrPayload protocol.Payload
+
+		err := json.Read(conn, &svrPayload)
 		if err != nil {
 			log.Println("Error communicating with server: ", err)
 		} else {
-			log.Printf("received %d from server %v", serverPayload.Number, serverPayload.Name)
+			log.Printf("received %d from server %v", svrPayload.Number, svrPayload.Name)
 
-			sum := serverPayload.Number + clientPayload.Number
-			log.Printf("%d + %d = %d\n", serverPayload.Number, clientPayload.Number, sum)
+			sum := svrPayload.Number + cltPayload.Number
+			log.Printf("%d + %d = %d\n", svrPayload.Number, cltPayload.Number, sum)
 		}
 	}
 }
