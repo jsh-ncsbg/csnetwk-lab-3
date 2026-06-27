@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/json"
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/protocol"
+	"github.com/jsh-ncsbg/csnetwk-lab-3/pkg/json"
 )
 
 type LockedInt struct {

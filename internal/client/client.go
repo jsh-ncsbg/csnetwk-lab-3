@@ -1,53 +1,65 @@
 package client
 
 import (
+	"bufio"
+	"fmt"
 	"io"
-	"net"
+	"log"
+	"os"
 	"strconv"
+	"strings"
 
-	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/server"
+	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/protocol"
+	"github.com/jsh-ncsbg/csnetwk-lab-3/pkg/json"
 )
 
-type Client struct {
-	in        io.Reader
-	conn      net.Conn
-	serverCfg server.Config
-	handler   HandlerFunc
-}
+func getClientPayload(r io.Reader) (*protocol.Payload, error) {
+	bufReader := bufio.NewReader(r)
 
-type HandlerFunc func(io.Reader, io.ReadWriter)
-
-func (f HandlerFunc) Serve(r io.Reader, rw io.ReadWriter) {
-	f(r, rw)
-}
-
-func NewClient(in io.Reader, serverCfg server.Config) *Client {
-	return &Client{
-		in:        in,
-		serverCfg: serverCfg,
-	}
-}
-
-func (c *Client) HandleFunc(f HandlerFunc) {
-	c.handler = f
-}
-
-func (c *Client) Close() error {
-	return c.conn.Close()
-}
-
-func (c *Client) Dial() error {
-	addr := net.JoinHostPort(c.serverCfg.Host, strconv.Itoa(c.serverCfg.Port))
-
-	conn, err := net.Dial(c.serverCfg.Network, addr)
+	// client name
+	fmt.Printf("What is your name? ")
+	line, err := bufReader.ReadString('\n')
 	if err != nil {
-		return err
+		return nil, err
+	}
+	cltName := strings.TrimSpace(line)
+
+	// client number
+	fmt.Printf("Enter a number in [1, 100]: ")
+	line, err = bufReader.ReadString('\n')
+	line = strings.TrimSpace(line)
+	cltNumber, err := strconv.Atoi(line)
+	if err != nil {
+		return nil, err
 	}
 
-	c.conn = conn
-	return nil
+	return protocol.NewPayload(cltName, cltNumber), nil
 }
 
-func (c *Client) Start() {
-	c.handler.Serve(c.in, c.conn)
+func Serve(r io.Reader, rw io.ReadWriter) {
+	cltPayload, err := getClientPayload(r)
+	if err != nil {
+		log.Fatalln("Input error")
+	}
+
+	// send to server
+	err = json.Write(rw, cltPayload)
+	if err != nil {
+		log.Println("Failed to send to server.")
+		os.Exit(0)
+	}
+
+	if 1 <= cltPayload.Number && cltPayload.Number <= 100 {
+		svrPayload := &protocol.Payload{}
+
+		err := json.Read(rw, svrPayload)
+		if err != nil {
+			log.Println("Error communicating with server: ", err)
+		} else {
+			log.Printf("received %d from server %v", svrPayload.Number, svrPayload.Name)
+
+			sum := svrPayload.Number + cltPayload.Number
+			log.Printf("%d + %d = %d\n", svrPayload.Number, cltPayload.Number, sum)
+		}
+	}
 }

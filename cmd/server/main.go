@@ -5,7 +5,9 @@ import (
 	"io"
 	"log"
 
-	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/server"
+	intlServer "github.com/jsh-ncsbg/csnetwk-lab-3/internal/server"
+	"github.com/jsh-ncsbg/csnetwk-lab-3/pkg/server"
+	pkgServer "github.com/jsh-ncsbg/csnetwk-lab-3/pkg/server"
 )
 
 func main() {
@@ -28,7 +30,7 @@ func main() {
 		Port:    *serverPort,
 		Network: "tcp",
 	}
-	server := server.NewServer(serverConfig)
+	server := pkgServer.NewServer(serverConfig)
 
 	err := server.Run()
 	if err != nil {
@@ -37,6 +39,6 @@ func main() {
 	defer server.Close()
 	log.Print("listening on ", serverConfig.Host, ":", serverConfig.Port)
 
-	server.HandleFunc(handleClient)
+	server.HandleFunc(intlServer.HandleClient)
 	server.Start()
 }

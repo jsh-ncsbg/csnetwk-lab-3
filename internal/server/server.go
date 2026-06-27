@@ -1,62 +1,35 @@
 package server
 
 import (
-	"fmt"
 	"log"
 	"net"
+
+	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/protocol"
+	"github.com/jsh-ncsbg/csnetwk-lab-3/pkg/json"
 )
 
-type Server struct {
-	cfg     Config
-	ln      net.Listener
-	handler HandlerFunc
-}
+const (
+	ServerName   = "Josh"
+	ServerNumber = 67
+)
 
-type Config struct {
-	Host    string
-	Port    int
-	Network string
-}
+func HandleClient(conn net.Conn) {
+	defer conn.Close()
 
-type HandlerFunc func(net.Conn)
+	svrPayload := protocol.NewPayload(ServerName, ServerNumber)
 
-func (f HandlerFunc) handleClient(conn net.Conn) {
-	f(conn)
-}
-
-func NewServer(cfg Config) *Server {
-	return &Server{
-		cfg: cfg,
-	}
-}
-
-func (s *Server) HandleFunc(f HandlerFunc) {
-	s.handler = f
-}
-
-func (s *Server) Run() error {
-	addr := fmt.Sprintf("%s:%d", s.cfg.Host, s.cfg.Port)
-	conn, err := net.Listen(s.cfg.Network, addr)
+	cltPayload := &protocol.Payload{}
+	err := json.Read(conn, cltPayload)
 	if err != nil {
-		return err
+		log.Println("parsing error: ", err)
+		return
 	}
-	s.ln = conn
-	return nil
-}
 
-func (s *Server) Close() error {
-	return s.ln.Close()
-}
+	log.Printf("received %d from %v", cltPayload.Number, cltPayload.Name)
+	log.Printf("%d + %d = %d", svrPayload.Number, cltPayload.Number, svrPayload.Number+cltPayload.Number)
 
-func (s *Server) Start() {
-	listener := s.ln
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			log.Print(err)
-			continue
-		}
-
-		go s.handler.handleClient(conn)
+	// reply
+	if err := json.Write(conn, svrPayload); err != nil {
+		log.Printf("Failed to send to client")
 	}
 }

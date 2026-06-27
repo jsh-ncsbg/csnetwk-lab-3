@@ -5,8 +5,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/client"
-	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/server"
+	intlClient "github.com/jsh-ncsbg/csnetwk-lab-3/internal/client"
+	pkgClient "github.com/jsh-ncsbg/csnetwk-lab-3/pkg/client"
+	"github.com/jsh-ncsbg/csnetwk-lab-3/pkg/server"
 )
 
 func main() {
@@ -26,8 +27,8 @@ func main() {
 		Network: "tcp",
 	}
 
-	client := client.NewClient(os.Stdin, serverConfig)
-	client.HandleFunc(serve)
+	client := pkgClient.NewClient(os.Stdin, serverConfig)
+	client.HandleFunc(intlClient.Serve)
 
 	if err := client.Dial(); err != nil {
 		log.Fatalln("error connecting to server: ", err)
