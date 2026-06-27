@@ -21,3 +21,7 @@ run-server: build-server
 run-client: build-client
 	@echo "Starting client..."
 	@./bin/client
+
+test:
+	@echo "Running tests..."
+	@go test -v ./...
