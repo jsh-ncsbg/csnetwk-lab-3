@@ -1,36 +1,43 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/json"
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/protocol"
 )
 
-func getClientPayload() (payload protocol.Payload, err error) {
-	var number int
-	var name string
+func getClientPayload(r io.Reader) (*protocol.Payload, error) {
+	bufReader := bufio.NewReader(r)
 
+	// client name
 	fmt.Printf("What is your name? ")
-	_, err = fmt.Scan(&name)
+	line, err := bufReader.ReadString('\n')
 	if err != nil {
-		return protocol.Payload{}, err
+		return nil, err
 	}
+	cltName := strings.TrimSpace(line)
 
+	// client number
 	fmt.Printf("Enter a number in [1, 100]: ")
-	_, err = fmt.Scan(&number)
+	line, err = bufReader.ReadString('\n')
+	line = strings.TrimSpace(line)
+	cltNumber, err := strconv.Atoi(line)
 	if err != nil {
-		return protocol.Payload{}, err
+		return nil, err
 	}
 
-	return protocol.Payload{Name: name, Number: number}, err
+	return protocol.NewPayload(cltName, cltNumber), nil
 }
 
 func serve(r io.Reader, rw io.ReadWriter) {
-	cltPayload, err := getClientPayload()
+	cltPayload, err := getClientPayload(r)
 	if err != nil {
 		log.Fatalln("Input error")
 	}
