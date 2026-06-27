@@ -10,20 +10,22 @@ import (
 
 type Client struct {
 	in        io.Reader
+	out       io.Writer
 	conn      net.Conn
 	serverCfg server.Config
 	handler   HandlerFunc
 }
 
-type HandlerFunc func(io.Reader, io.ReadWriter)
+type HandlerFunc func(io.Writer, io.Reader, io.ReadWriter)
 
-func (f HandlerFunc) Serve(r io.Reader, rw io.ReadWriter) {
-	f(r, rw)
+func (f HandlerFunc) Serve(w io.Writer, r io.Reader, conn io.ReadWriter) {
+	f(w, r, conn)
 }
 
-func NewClient(in io.Reader, serverCfg server.Config) *Client {
+func NewClient(out io.Writer, in io.Reader, serverCfg server.Config) *Client {
 	return &Client{
 		in:        in,
+		out:       out,
 		serverCfg: serverCfg,
 	}
 }
@@ -49,5 +51,5 @@ func (c *Client) Dial() error {
 }
 
 func (c *Client) Start() {
-	c.handler.Serve(c.in, c.conn)
+	c.handler.Serve(c.out, c.in, c.conn)
 }

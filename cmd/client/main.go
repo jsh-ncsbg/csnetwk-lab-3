@@ -27,7 +27,7 @@ func main() {
 		Network: "tcp",
 	}
 
-	client := pkgClient.NewClient(os.Stdin, serverConfig)
+	client := pkgClient.NewClient(os.Stdout, os.Stdin, serverConfig)
 	client.HandleFunc(intlClient.Serve)
 
 	if err := client.Dial(); err != nil {

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
 	"strconv"
 	"strings"
 
@@ -13,11 +12,11 @@ import (
 	"github.com/jsh-ncsbg/csnetwk-lab-3/pkg/json"
 )
 
-func getClientPayload(r io.Reader) (*protocol.Payload, error) {
+func getClientPayload(w io.Writer, r io.Reader) (*protocol.Payload, error) {
 	bufReader := bufio.NewReader(r)
 
 	// client name
-	fmt.Printf("What is your name? ")
+	fmt.Fprintf(w, "What is your name? ")
 	line, err := bufReader.ReadString('\n')
 	if err != nil {
 		return nil, err
@@ -25,7 +24,7 @@ func getClientPayload(r io.Reader) (*protocol.Payload, error) {
 	cltName := strings.TrimSpace(line)
 
 	// client number
-	fmt.Printf("Enter a number in [1, 100]: ")
+	fmt.Fprintf(w, "Enter a number in [1, 100]: ")
 	line, err = bufReader.ReadString('\n')
 	line = strings.TrimSpace(line)
 	cltNumber, err := strconv.Atoi(line)
@@ -36,8 +35,8 @@ func getClientPayload(r io.Reader) (*protocol.Payload, error) {
 	return protocol.NewPayload(cltName, cltNumber), nil
 }
 
-func Serve(r io.Reader, rw io.ReadWriter) {
-	cltPayload, err := getClientPayload(r)
+func Serve(w io.Writer, r io.Reader, rw io.ReadWriter) {
+	cltPayload, err := getClientPayload(w, r)
 	if err != nil {
 		log.Fatalln("Input error")
 	}
@@ -45,8 +44,8 @@ func Serve(r io.Reader, rw io.ReadWriter) {
 	// send to server
 	err = json.Write(rw, cltPayload)
 	if err != nil {
-		log.Println("Failed to send to server.")
-		os.Exit(0)
+		fmt.Fprint(w, "failed to send to server: ", err)
+		return
 	}
 
 	if 1 <= cltPayload.Number && cltPayload.Number <= 100 {
@@ -54,12 +53,12 @@ func Serve(r io.Reader, rw io.ReadWriter) {
 
 		err := json.Read(rw, svrPayload)
 		if err != nil {
-			log.Println("Error communicating with server: ", err)
+			fmt.Fprintln(w, "error communicating with server: ", err)
 		} else {
-			log.Printf("received %d from server %v", svrPayload.Number, svrPayload.Name)
+			fmt.Fprintf(w, "received %d from server %v", svrPayload.Number, svrPayload.Name)
 
 			sum := svrPayload.Number + cltPayload.Number
-			log.Printf("%d + %d = %d\n", svrPayload.Number, cltPayload.Number, sum)
+			fmt.Fprintf(w, "%d + %d = %d\n", svrPayload.Number, cltPayload.Number, sum)
 		}
 	}
 }
