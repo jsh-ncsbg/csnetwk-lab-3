@@ -8,7 +8,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/jsh-ncsbg/csnetwk-lab-3/protocol"
+	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/protocol"
 )
 
 func getClientPayload() (payload protocol.Payload, err error) {
