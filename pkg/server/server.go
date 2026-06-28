@@ -1,14 +1,19 @@
 package server
 
 import (
+	"context"
+	"errors"
 	"fmt"
-	"log"
 	"net"
+
+	"github.com/jsh-ncsbg/csnetwk-lab-3/pkg/logger"
 )
 
 type Server struct {
 	cfg     Config
 	ln      net.Listener
+	ctx     context.Context
+	logger  logger.Logger
 	handler HandlerFunc
 }
 
@@ -18,15 +23,17 @@ type Config struct {
 	Network string
 }
 
-type HandlerFunc func(net.Conn)
+type HandlerFunc func(context.CancelFunc, logger.Logger, net.Conn)
 
-func (f HandlerFunc) handleClient(conn net.Conn) {
-	f(conn)
+func (f HandlerFunc) handleClient(ctxCancelFunc context.CancelFunc, logger logger.Logger, conn net.Conn) {
+	f(ctxCancelFunc, logger, conn)
 }
 
-func NewServer(cfg Config) *Server {
+func NewServer(ctx context.Context, logger logger.Logger, cfg Config) *Server {
 	return &Server{
-		cfg: cfg,
+		logger: logger,
+		ctx:    ctx,
+		cfg:    cfg,
 	}
 }
 
@@ -50,13 +57,31 @@ func (s *Server) Close() error {
 
 func (s *Server) Start() {
 	listener := s.ln
+
+	if s.ctx == nil {
+		s.ctx = context.Background()
+	}
+
+	done, cancel := context.WithCancel(s.ctx)
+	defer cancel()
+
+	go func() {
+		<-done.Done()
+		s.Close()
+	}()
+
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Print(err)
+			if errors.Is(err, net.ErrClosed) {
+				s.logger.Println("Server listener closed. Stopping accept loop.")
+				return
+			}
+
+			s.logger.Println(err)
 			continue
 		}
 
-		go s.handler.handleClient(conn)
+		go s.handler.handleClient(cancel, s.logger, conn)
 	}
 }
