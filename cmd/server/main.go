@@ -28,7 +28,7 @@ func main() {
 		Network: "tcp",
 	}
 
-	server := pkgServer.NewServer(context.Background(), serverConfig)
+	server := pkgServer.NewServer(context.Background(), logger, serverConfig)
 
 	err := server.Run()
 	if err != nil {
