@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 
@@ -26,7 +27,8 @@ func main() {
 		Port:    *serverPort,
 		Network: "tcp",
 	}
-	server := pkgServer.NewServer(serverConfig)
+
+	server := pkgServer.NewServer(context.Background(), serverConfig)
 
 	err := server.Run()
 	if err != nil {

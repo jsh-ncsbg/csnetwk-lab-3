@@ -1,6 +1,8 @@
 package server
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -9,6 +11,7 @@ import (
 type Server struct {
 	cfg     Config
 	ln      net.Listener
+	ctx     context.Context
 	handler HandlerFunc
 }
 
@@ -18,14 +21,15 @@ type Config struct {
 	Network string
 }
 
-type HandlerFunc func(net.Conn)
+type HandlerFunc func(context.CancelFunc, net.Conn)
 
-func (f HandlerFunc) handleClient(conn net.Conn) {
-	f(conn)
+func (f HandlerFunc) handleClient(ctxCancelFunc context.CancelFunc, conn net.Conn) {
+	f(ctxCancelFunc, conn)
 }
 
-func NewServer(cfg Config) *Server {
+func NewServer(ctx context.Context, cfg Config) *Server {
 	return &Server{
+		ctx: ctx,
 		cfg: cfg,
 	}
 }
@@ -50,13 +54,33 @@ func (s *Server) Close() error {
 
 func (s *Server) Start() {
 	listener := s.ln
+
+	if s.ctx == nil {
+		s.ctx = context.Background()
+	}
+
+	done, cancel := context.WithCancel(s.ctx)
+	defer cancel()
+
+	go func() {
+		<-done.Done()
+		s.Close()
+	}()
+
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
+			if errors.Is(err, net.ErrClosed) {
+				fmt.Println("Server listener closed. Stopping accept loop.")
+				// TODO: replace with logger
+				return
+			}
+
+			// TODO: replace with logger
 			log.Print(err)
 			continue
 		}
 
-		go s.handler.handleClient(conn)
+		go s.handler.handleClient(cancel, conn)
 	}
 }

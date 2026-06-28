@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"log"
 	"net"
 
@@ -13,7 +14,7 @@ const (
 	ServerNumber = 67
 )
 
-func HandleClient(conn net.Conn) {
+func HandleClient(ctxCancelFunc context.CancelFunc, conn net.Conn) {
 	defer conn.Close()
 
 	svrPayload := protocol.NewPayload(ServerName, ServerNumber)
@@ -26,6 +27,12 @@ func HandleClient(conn net.Conn) {
 	}
 
 	log.Printf("received %d from %v", cltPayload.Number, cltPayload.Name)
+	if cltPayload.Number <= 0 || cltPayload.Number > 100 {
+		log.Println("client has requested to stop the server.")
+		ctxCancelFunc()
+		return
+	}
+
 	log.Printf("%d + %d = %d", svrPayload.Number, cltPayload.Number, svrPayload.Number+cltPayload.Number)
 
 	// reply
