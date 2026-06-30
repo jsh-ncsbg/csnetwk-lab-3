@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"flag"
 	"io"
 	"log"
@@ -15,7 +17,7 @@ const (
 	ServerNumber = 67
 )
 
-func handleClient(conn net.Conn) {
+func handleClient(shutdown context.CancelFunc, conn net.Conn) {
 	defer conn.Close()
 
 	svrPayload := payload.NewPayload(ServerName, ServerNumber)
@@ -32,7 +34,11 @@ func handleClient(conn net.Conn) {
 
 	// reply
 	if err := json.Write(conn, svrPayload); err != nil {
-		log.Printf("Failed to send to client")
+		log.Printf("failed to send to client")
+	}
+
+	if cltPayload.Number <= 0 || 100 < cltPayload.Number {
+		shutdown()
 	}
 }
 
@@ -53,20 +59,33 @@ func main() {
 
 	server, err := net.Listen("tcp", net.JoinHostPort(*serverHost, *serverPort))
 	if err != nil {
-		log.Fatalln("Failed to start server: ", err)
+		log.Fatalln("failed to start server: ", err)
 	}
 	defer server.Close()
 
-	log.Println("Listening on port", *serverPort)
+	log.Println("listening on port", *serverPort)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		<-ctx.Done()
+		server.Close()
+	}()
 
 	// start accepting
 	for {
 		conn, err := server.Accept()
 		if err != nil {
-			log.Println("Connection error. Skipping..")
+			if errors.Is(err, net.ErrClosed) {
+				log.Println("stopping accept loop (server shutdown)")
+				break
+			}
+
+			log.Println("connection error. skipping..")
 			continue
 		}
 		log.Println(conn.RemoteAddr(), "connected")
-		go handleClient(conn)
+		go handleClient(cancel, conn)
 	}
 }
