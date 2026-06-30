@@ -7,7 +7,7 @@ import (
 	"net"
 
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/json"
-	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/protocol"
+	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/payload"
 )
 
 const (
@@ -18,13 +18,10 @@ const (
 func handleClient(conn net.Conn) {
 	defer conn.Close()
 
-	svrPayload := protocol.Payload{
-		Name:   ServerName,
-		Number: ServerNumber,
-	}
+	svrPayload := payload.NewPayload(ServerName, ServerNumber)
 
-	var cltPayload protocol.Payload
-	err := json.Read(conn, &cltPayload)
+	cltPayload := &payload.Payload{}
+	err := json.Read(conn, cltPayload)
 	if err != nil {
 		log.Println("parsing error: ", err)
 		return
@@ -62,6 +59,7 @@ func main() {
 
 	log.Println("Listening on port", *serverPort)
 
+	// start accepting
 	for {
 		conn, err := server.Accept()
 		if err != nil {

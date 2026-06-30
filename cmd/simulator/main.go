@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/json"
-	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/protocol"
+	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/payload"
 )
 
 type LockedInt struct {
@@ -35,13 +35,13 @@ func worker(jobs <-chan int, delayMs int, wg *sync.WaitGroup, success *LockedInt
 
 		time.Sleep(time.Duration(delayMs) * time.Millisecond)
 
-		err = json.Write(conn, protocol.Payload{Name: "Josh", Number: 1})
+		err = json.Write(conn, payload.Payload{Name: "Josh", Number: 1})
 		if err != nil {
 			fails.Increment()
 			isError = true
 		}
 
-		var tmp protocol.Payload
+		var tmp payload.Payload
 		err = json.Read(conn, &tmp)
 		if err != nil {
 			fails.Increment()

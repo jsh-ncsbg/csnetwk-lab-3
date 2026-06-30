@@ -8,26 +8,29 @@ import (
 	"os"
 
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/json"
-	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/protocol"
+	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/payload"
 )
 
-func getClientPayload() (payload protocol.Payload, err error) {
+func getClientPayload(p *payload.Payload) error {
 	var number int
 	var name string
 
 	fmt.Printf("What is your name? ")
-	_, err = fmt.Scan(&name)
+	_, err := fmt.Scan(&name)
 	if err != nil {
-		return protocol.Payload{}, err
+		return err
 	}
 
 	fmt.Printf("Enter a number in [1, 100]: ")
 	_, err = fmt.Scan(&number)
 	if err != nil {
-		return protocol.Payload{}, err
+		return err
 	}
 
-	return protocol.Payload{Name: name, Number: number}, err
+	p.Name = name
+	p.Number = number
+
+	return err
 }
 
 func main() {
@@ -50,7 +53,8 @@ func main() {
 
 	log.Println("Connected to server")
 
-	cltPayload, err := getClientPayload()
+	cltPayload := &payload.Payload{}
+	err = getClientPayload(cltPayload)
 	if err != nil {
 		log.Fatalln("Input error")
 	}
@@ -63,9 +67,9 @@ func main() {
 	}
 
 	if 1 <= cltPayload.Number && cltPayload.Number <= 100 {
-		var svrPayload protocol.Payload
+		svrPayload := &payload.Payload{}
 
-		err := json.Read(conn, &svrPayload)
+		err := json.Read(conn, svrPayload)
 		if err != nil {
 			log.Println("Error communicating with server: ", err)
 		} else {
