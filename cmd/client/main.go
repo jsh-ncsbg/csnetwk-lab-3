@@ -6,7 +6,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"strconv"
 
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/json"
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/protocol"
@@ -33,8 +32,8 @@ func getClientPayload() (payload protocol.Payload, err error) {
 
 func main() {
 	serverHost := flag.String("hostname", "localhost", "server host name")
-	serverPort := flag.Int("port", 8000, "server port number")
-	network := flag.String("network", "tcp", "network")
+	serverPort := flag.String("port", "8080", "server port number")
+
 	flag.Parse()
 
 	// logger setup
@@ -42,7 +41,7 @@ func main() {
 	log.SetFlags(log.Lmsgprefix | log.Ltime)
 
 	log.Println("Connecting to server...")
-	conn, err := net.Dial(*network, *serverHost+":"+strconv.Itoa(*serverPort))
+	conn, err := net.Dial("tcp", net.JoinHostPort(*serverHost, *serverPort))
 
 	if err != nil {
 		log.Fatalln("Error connecting to server: ", err)

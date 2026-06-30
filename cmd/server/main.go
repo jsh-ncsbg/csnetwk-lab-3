@@ -5,7 +5,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"strconv"
 
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/json"
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/protocol"
@@ -42,8 +41,7 @@ func handleClient(conn net.Conn) {
 
 func main() {
 	serverHost := flag.String("hostname", "0.0.0.0", "server host name")
-	serverPort := flag.Int("port", 8000, "server port number")
-	network := flag.String("network", "tcp", "network")
+	serverPort := flag.String("port", "8080", "server port number")
 
 	silent := flag.Bool("silent", false, "disable all log output")
 
@@ -56,7 +54,7 @@ func main() {
 		log.SetOutput(io.Discard)
 	}
 
-	server, err := net.Listen(*network, *serverHost+":"+strconv.Itoa(*serverPort))
+	server, err := net.Listen("tcp", net.JoinHostPort(*serverHost, *serverPort))
 	if err != nil {
 		log.Fatalln("Failed to start server: ", err)
 	}
