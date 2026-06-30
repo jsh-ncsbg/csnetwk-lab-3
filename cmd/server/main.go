@@ -7,6 +7,9 @@ import (
 	"io"
 	"log"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/json"
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/payload"
@@ -53,6 +56,10 @@ func main() {
 
 	flag.Parse()
 
+	// signal aware context
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	// logger setup
 	log.SetPrefix("[SERVER] ")
 	log.SetFlags(log.Ltime | log.Lmsgprefix)
@@ -67,9 +74,6 @@ func main() {
 	defer server.Close()
 
 	log.Println("listening on port", *serverPort)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	go func() {
 		<-ctx.Done()
@@ -89,6 +93,7 @@ func main() {
 			continue
 		}
 		log.Println(conn.RemoteAddr(), "connected")
-		go handleClient(cancel, conn)
+
+		go handleClient(stop, conn)
 	}
 }
