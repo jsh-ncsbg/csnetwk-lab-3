@@ -24,7 +24,7 @@ func handleClient(conn net.Conn) {
 	}
 
 	var cltPayload protocol.Payload
-	err := json.Read(conn, cltPayload)
+	err := json.Read(conn, &cltPayload)
 	if err != nil {
 		log.Println("parsing error: ", err)
 		return
