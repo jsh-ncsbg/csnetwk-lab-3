@@ -22,15 +22,17 @@ func handleClient(shutdown context.CancelFunc, conn net.Conn) {
 
 	svrPayload := payload.NewPayload(ServerName, ServerNumber)
 
+	// read and parse client payload
 	cltPayload := &payload.Payload{}
-	err := json.Read(conn, cltPayload)
-	if err != nil {
+	if err := json.Read(conn, cltPayload); err != nil {
 		log.Println("parsing error: ", err)
 		return
 	}
 
-	log.Printf("received %d from %v", cltPayload.Number, cltPayload.Name)
-	log.Printf("%d + %d = %d", svrPayload.Number, cltPayload.Number, svrPayload.Number+cltPayload.Number)
+	// log
+	sum := svrPayload.Number + cltPayload.Number
+	log.Printf("received %d from %q", cltPayload.Number, cltPayload.Name)
+	log.Printf("%d + %d = %d", svrPayload.Number, cltPayload.Number, sum)
 
 	// reply
 	if err := json.Write(conn, svrPayload); err != nil {
@@ -38,6 +40,7 @@ func handleClient(shutdown context.CancelFunc, conn net.Conn) {
 	}
 
 	if cltPayload.Number <= 0 || 100 < cltPayload.Number {
+		log.Println("out of range number detected. server will now attempt to shutdown.")
 		shutdown()
 	}
 }

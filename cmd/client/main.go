@@ -12,25 +12,17 @@ import (
 )
 
 func getClientPayload(p *payload.Payload) error {
-	var number int
-	var name string
-
 	fmt.Printf("What is your name? ")
-	_, err := fmt.Scan(&name)
-	if err != nil {
+	if _, err := fmt.Scan(&p.Name); err != nil {
 		return err
 	}
 
 	fmt.Printf("Enter a number in [1, 100]: ")
-	_, err = fmt.Scan(&number)
-	if err != nil {
+	if _, err := fmt.Scan(&p.Number); err != nil {
 		return err
 	}
 
-	p.Name = name
-	p.Number = number
-
-	return err
+	return nil
 }
 
 func main() {
@@ -43,26 +35,24 @@ func main() {
 	log.SetPrefix("[CLIENT] ")
 	log.SetFlags(log.Lmsgprefix | log.Ltime)
 
-	log.Println("Connecting to server...")
+	log.Println("connecting to server...")
 	conn, err := net.Dial("tcp", net.JoinHostPort(*serverHost, *serverPort))
-
 	if err != nil {
 		log.Fatalln("Error connecting to server: ", err)
 	}
 	defer conn.Close()
 
-	log.Println("Connected to server")
+	log.Println("connected to server")
 
+	// client payload
 	cltPayload := &payload.Payload{}
-	err = getClientPayload(cltPayload)
-	if err != nil {
+	if err := getClientPayload(cltPayload); err != nil {
 		log.Fatalln("Input error")
 	}
 
 	// send to server
-	err = json.Write(conn, cltPayload)
-	if err != nil {
-		log.Println("Failed to send to server.")
+	if err := json.Write(conn, cltPayload); err != nil {
+		log.Println("failed to send to server.")
 		os.Exit(0)
 	}
 
@@ -71,9 +61,9 @@ func main() {
 
 		err := json.Read(conn, svrPayload)
 		if err != nil {
-			log.Println("Error communicating with server: ", err)
+			log.Println("error communicating with server: ", err)
 		} else {
-			log.Printf("received %d from server %v", svrPayload.Number, svrPayload.Name)
+			log.Printf("received %d from server %q", svrPayload.Number, svrPayload.Name)
 
 			sum := svrPayload.Number + cltPayload.Number
 			log.Printf("%d + %d = %d\n", svrPayload.Number, cltPayload.Number, sum)
