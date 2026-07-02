@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/json"
@@ -71,14 +72,15 @@ func main() {
 	if err != nil {
 		log.Fatalln("failed to start server: ", err)
 	}
-	defer server.Close()
 
 	log.Println("listening on port", *serverPort)
 
-	go func() {
+	wg := sync.WaitGroup{}
+
+	wg.Go(func() {
 		<-ctx.Done()
 		server.Close()
-	}()
+	})
 
 	// start accepting
 	for {
@@ -94,6 +96,12 @@ func main() {
 		}
 		log.Println(conn.RemoteAddr(), "connected")
 
-		go handleClient(stop, conn)
+		wg.Go(func() {
+			handleClient(stop, conn)
+		})
 	}
+
+	log.Println("waiting for goroutines to stop...")
+	wg.Wait()
+	log.Println("server shutdown successfully.")
 }
