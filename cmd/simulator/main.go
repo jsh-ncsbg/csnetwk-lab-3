@@ -86,7 +86,7 @@ func main() {
 	fmt.Println("============= BENCHMARK RESULTS =============")
 	fmt.Printf("Concurrent Users: %d\n", min(*maxWorkers, *total))
 	fmt.Printf("Total Users: %d\n", *total)
-	fmt.Printf("Completed in %v\n", elapsedTime.Round(time.Millisecond))
-	fmt.Printf("Success: %d/%d\n", success, *total)
-	fmt.Printf("Fail: %d/%d\n", fail, *total)
+	fmt.Printf("Time Elapsed: %v\n", elapsedTime.Round(time.Millisecond))
+	fmt.Printf("Success: %d (%.2f%%)\n", success, 100 * float64(success)/float64(*total))
+	fmt.Printf("Fail: %d (%.2f%%)\n", fail, 100 * float64(fail)/float64(*total))
 }
