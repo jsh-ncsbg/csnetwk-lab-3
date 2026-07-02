@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
 
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/json"
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/payload"
@@ -53,20 +52,22 @@ func main() {
 	// send to server
 	if err := json.Write(conn, cltPayload); err != nil {
 		log.Println("failed to send to server.")
-		os.Exit(0)
+		return
 	}
 
 	if 1 <= cltPayload.Number && cltPayload.Number <= 100 {
 		svrPayload := &payload.Payload{}
 
-		err := json.Read(conn, svrPayload)
-		if err != nil {
+		if err := json.Read(conn, svrPayload); err != nil {
 			log.Println("error communicating with server: ", err)
-		} else {
-			log.Printf("received %d from server %q", svrPayload.Number, svrPayload.Name)
-
-			sum := svrPayload.Number + cltPayload.Number
-			log.Printf("%d + %d = %d\n", svrPayload.Number, cltPayload.Number, sum)
+			return
 		}
+
+		log.Printf("received %d from server %q", svrPayload.Number, svrPayload.Name)
+
+		sum := svrPayload.Number + cltPayload.Number
+		log.Printf("%d + %d = %d\n", svrPayload.Number, cltPayload.Number, sum)
+	} else {
+		log.Println("server shutdown request sent.")
 	}
 }
