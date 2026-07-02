@@ -11,45 +11,31 @@ import (
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/payload"
 )
 
-type LockedInt struct {
-	mu sync.Mutex
-	int
-}
-
-func (li *LockedInt) Increment() {
-	li.mu.Lock()
-	li.int++
-	li.mu.Unlock()
-}
-
-func worker(jobs <-chan int, delayMs int, wg *sync.WaitGroup, success *LockedInt, fails *LockedInt) {
-	defer wg.Done()
+func worker(jobs <-chan int, delayMs int, sChan chan time.Duration) {
 	for range jobs {
-		conn, err := net.Dial("tcp", "localhost:8000")
+		conn, err := net.Dial("tcp", "localhost:8080")
+
+		start := time.Now()
 		if err != nil {
-			fails.Increment()
 			continue
 		}
 
 		isError := false
-
 		time.Sleep(time.Duration(delayMs) * time.Millisecond)
 
 		err = json.Write(conn, payload.Payload{Name: "Josh", Number: 1})
 		if err != nil {
-			fails.Increment()
 			isError = true
 		}
 
 		var tmp payload.Payload
 		err = json.Read(conn, &tmp)
 		if err != nil {
-			fails.Increment()
 			isError = true
 		}
 
 		if !isError {
-			success.Increment()
+			sChan <- time.Since(start)
 		}
 
 		conn.Close()
@@ -62,8 +48,9 @@ func main() {
 	delayMs := flag.Int("delay", 0, "Set time (in milliseconds) before client replies")
 	flag.Parse()
 
-	successCount := LockedInt{}
-	failCount := LockedInt{}
+	success := 0
+
+	successChan := make(chan time.Duration, *total)
 
 	var wg sync.WaitGroup
 	jobs := make(chan int, *total)
@@ -72,8 +59,9 @@ func main() {
 
 	// spawn workers
 	for i := 0; i < *maxWorkers; i++ {
-		wg.Add(1)
-		go worker(jobs, *delayMs, &wg, &successCount, &failCount)
+		wg.Go(func() {
+			worker(jobs, *delayMs, successChan)
+		})
 	}
 
 	// spawn jobs
@@ -83,12 +71,16 @@ func main() {
 	close(jobs)
 
 	wg.Wait()
+	close(successChan)
+
+	success = len(successChan)
+	fail := *total - success
 
 	elapsedTime := time.Since(start)
 	fmt.Println("============= BENCHMARK RESULTS =============")
 	fmt.Printf("Concurrent Users: %d\n", min(*maxWorkers, *total))
 	fmt.Printf("Total Users: %d\n", *total)
-	fmt.Printf("Completed in %.2f seconds\n", elapsedTime.Seconds())
-	fmt.Printf("Success: %d/%d\n", successCount.int, *total)
-	fmt.Printf("Fail: %d/%d\n", failCount.int, *total)
+	fmt.Printf("Completed in %v\n", elapsedTime.Round(time.Millisecond))
+	fmt.Printf("Success: %d/%d\n", success, *total)
+	fmt.Printf("Fail: %d/%d\n", fail, *total)
 }
