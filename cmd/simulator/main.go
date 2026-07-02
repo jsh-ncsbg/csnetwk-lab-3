@@ -11,7 +11,24 @@ import (
 	"github.com/jsh-ncsbg/csnetwk-lab-3/internal/payload"
 )
 
-func worker(jobs <-chan int, delayMs int, sChan chan time.Duration) {
+func processClient(conn net.Conn) error {
+	defer conn.Close()
+
+	// send payload to server
+	if err := json.Write(conn, payload.NewPayload("Josh", 67)); err != nil {
+		return err
+	}
+
+	// receive payload form server
+	server := &payload.Payload{}
+	if err := json.Read(conn, server); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func worker(jobs <-chan int, delayMs time.Duration, sChan chan time.Duration) {
 	for range jobs {
 		conn, err := net.Dial("tcp", "localhost:8080")
 
@@ -20,21 +37,10 @@ func worker(jobs <-chan int, delayMs int, sChan chan time.Duration) {
 			continue
 		}
 
-		isError := false
-		time.Sleep(time.Duration(delayMs) * time.Millisecond)
+		// simulate lag
+		time.Sleep(delayMs)
 
-		err = json.Write(conn, payload.Payload{Name: "Josh", Number: 1})
-		if err != nil {
-			isError = true
-		}
-
-		var tmp payload.Payload
-		err = json.Read(conn, &tmp)
-		if err != nil {
-			isError = true
-		}
-
-		if !isError {
+		if err := processClient(conn); err == nil {
 			sChan <- time.Since(start)
 		}
 
@@ -60,7 +66,7 @@ func main() {
 	// spawn workers
 	for i := 0; i < *maxWorkers; i++ {
 		wg.Go(func() {
-			worker(jobs, *delayMs, successChan)
+			worker(jobs, time.Duration(*delayMs)*time.Millisecond, successChan)
 		})
 	}
 
