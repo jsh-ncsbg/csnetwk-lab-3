@@ -55,19 +55,15 @@ func main() {
 		return
 	}
 
-	if 1 <= cltPayload.Number && cltPayload.Number <= 100 {
-		svrPayload := &payload.Payload{}
-
-		if err := json.Read(conn, svrPayload); err != nil {
-			log.Println("error communicating with server: ", err)
-			return
-		}
-
-		log.Printf("received %d from server %q", svrPayload.Number, svrPayload.Name)
-
-		sum := svrPayload.Number + cltPayload.Number
-		log.Printf("%d + %d = %d\n", svrPayload.Number, cltPayload.Number, sum)
-	} else {
-		log.Println("server shutdown request sent.")
+	// receive server payload
+	svrPayload := &payload.Payload{}
+	if err := json.Read(conn, svrPayload); err != nil {
+		log.Println("error communicating with server: ", err)
+		return
 	}
+
+	log.Printf("received %d from server %q", svrPayload.Number, svrPayload.Name)
+
+	sum := svrPayload.Number + cltPayload.Number
+	log.Printf("%d + %d = %d\n", svrPayload.Number, cltPayload.Number, sum)
 }
