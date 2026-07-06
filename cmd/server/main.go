@@ -21,15 +21,31 @@ const (
 	ServerNumber = 67
 )
 
-func handleClient(shutdown context.CancelFunc, conn net.Conn) {
-	defer conn.Close()
+func handleClient(ctx context.Context, shutdown context.CancelFunc, workerId int, conn net.Conn) {
+	done := make(chan struct{}, 1)
+	defer func() {
+		done <- struct{}{}
+	}()
+
+	go func() {
+		select {
+		case <-ctx.Done():
+			log.Printf("requesting worker %d to close socket.", workerId)
+		case <-done:
+			// do nothing lol
+		}
+		conn.Close()
+		log.Printf("worker %d: socket closed", workerId)
+	}()
 
 	svrPayload := payload.NewPayload(ServerName, ServerNumber)
 
 	// read and parse client payload
 	cltPayload := &payload.Payload{}
 	if err := json.Read(conn, cltPayload); err != nil {
-		log.Println("parsing error: ", err)
+		if !errors.Is(err, net.ErrClosed) {
+			log.Println("parsing error: ", err)
+		}
 		return
 	}
 
@@ -83,6 +99,7 @@ func main() {
 	})
 
 	// start accepting
+	handleCount := 0
 	for {
 		conn, err := server.Accept()
 		if err != nil {
@@ -95,13 +112,14 @@ func main() {
 			continue
 		}
 		log.Println(conn.RemoteAddr(), "connected")
+		handleCount++
+		log.Printf("assigning worker %d to %s\n", handleCount, conn.RemoteAddr())
 
 		wg.Go(func() {
-			handleClient(stop, conn)
+			handleClient(ctx, stop, handleCount, conn)
 		})
 	}
 
-	log.Println("waiting for goroutines to stop...")
 	wg.Wait()
 	log.Println("server shutdown successfully.")
 }
