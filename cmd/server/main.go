@@ -44,7 +44,7 @@ func handleClient(shutdown context.CancelFunc, conn net.Conn) {
 	}
 
 	if cltPayload.Number <= 0 || 100 < cltPayload.Number {
-		log.Println("out of range number detected. server will now attempt to shutdown.")
+		log.Println("client number not in [1, 100]. shutting down..")
 		shutdown()
 	}
 }
