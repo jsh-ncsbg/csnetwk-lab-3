@@ -17,27 +17,11 @@ import (
 )
 
 const (
-	ServerName   = "Josh"
+	ServerName   = "Francis"
 	ServerNumber = 67
 )
 
-func handleClient(ctx context.Context, shutdown context.CancelFunc, workerId int, conn net.Conn) {
-	done := make(chan struct{}, 1)
-	defer func() {
-		done <- struct{}{}
-	}()
-
-	go func() {
-		select {
-		case <-ctx.Done():
-			log.Printf("requesting worker %d to close socket.", workerId)
-		case <-done:
-			// do nothing lol
-		}
-		conn.Close()
-		log.Printf("worker %d: socket closed", workerId)
-	}()
-
+func handleClient(shutdown context.CancelFunc, doneChan chan bool, conn net.Conn) {
 	svrPayload := payload.NewPayload(ServerName, ServerNumber)
 
 	// read and parse client payload
@@ -63,6 +47,8 @@ func handleClient(ctx context.Context, shutdown context.CancelFunc, workerId int
 		log.Println("client number not in [1, 100]. shutting down..")
 		shutdown()
 	}
+
+	doneChan <- true
 }
 
 func main() {
@@ -116,7 +102,17 @@ func main() {
 		log.Printf("assigning worker %d to %s\n", handleCount, conn.RemoteAddr())
 
 		wg.Go(func() {
-			handleClient(ctx, stop, handleCount, conn)
+			workerId := handleCount
+			doneChan := make(chan bool, 1)
+			go handleClient(stop, doneChan, conn)
+
+			select {
+			case <-ctx.Done():
+			case <-doneChan:
+			}
+
+			log.Println("closing socket assigned to worker", workerId)
+			conn.Close()
 		})
 	}
 
